@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
+    "baseUrl": ".",
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "paths": {
+      "shared/*": ["../shared/src/*"],
+    },
+    "target": "ES2019",
+    "typeRoots": ["node_modules/@types"],
+    "lib": ["es2019", "dom"],
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "./src/**/*.ts",
+    "../shared/src/**/*.ts"
+  ],
+  "exclude": [
+    "./node_modules",
+    "../shared/node_modules"
+  ]
+}

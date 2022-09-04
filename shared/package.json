@@ -1,0 +1,18 @@
+{
+    "name": "aciculate-shared",
+    "version": "1.0.0",
+    "description": "Calendar built with TypeScript and Native Web Components.",
+    "main": "index.js",
+    "scripts": {
+      "type-check": "tsc --noEmit --skipLibCheck",
+      "type-check-diagnostics": "tsc --noEmit --skipLibCheck --extendedDiagnostics",
+      "type-check-all": "tsc --noEmit",
+      "type-check-all-diagnostics": "tsc --noEmit --extendedDiagnostics"
+    },
+    "author": "Leonardo DiBella",
+    "license": "MIT",
+    "devDependencies": {
+      "typescript": "^4.7.4"
+    }
+  }
+  

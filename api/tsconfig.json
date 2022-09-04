@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
+    "baseUrl": ".",
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "importHelpers": false,
+    "paths": {
+      "@shared/*": ["../shared/src/*"]
+    },
+    "target": "ES2022",
+    "typeRoots": ["node_modules/@types"],
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "./src/**/*.ts",
+    "../shared/src/**/*.ts"
+  ],
+  "exclude": [
+    "./node_modules",
+    "../shared/node_modules"
+  ]
+}

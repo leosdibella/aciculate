@@ -1,0 +1,46 @@
+version: '3.1'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: '${PGUSER}'
+      POSTGRES_PASSWORD: '${PGPASSWORD}'
+      POSTGRES_DB: '${PGDATABASE}'
+    ports:
+      - '${PGPORT}:${PGPORT}'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+  api:
+    build: 
+      dockerfile: api.Dockerfile
+    ports:
+      - '${ACICULATE_API_PORT}:${ACICULATE_API_PORT}'
+    depends_on:
+      - db
+    environment:
+      PGHOST: '${PGHOST}'
+      PGUSER: '${PGUSER}'
+      PGDATABASE: '${PGDATABASE}'
+      PGPASSWORD: '${PGPASSWORD}'
+      PGPORT: '${PGPORT}'
+      ACICULATE_APP_PORT: '${ACICULATE_APP_PORT}'
+      ACICULATE_APP_ORIGIN: '${ACICULATE_APP_ORIGIN}'
+      ACICULATE_API_PORT: '${ACICULATE_API_PORT}'
+      ACICULATE_API_ORIGIN: '${ACICULATE_API_ORIGIN}'
+  app:
+    build:
+      dockerfile: app.Dockerfile
+    ports: 
+      - '${ACICULATE_APP_PORT}:${ACICULATE_APP_PORT}'
+    depends_on:
+      - api
+    environment:
+      ACICULATE_APP_PORT: '${ACICULATE_APP_PORT}'
+      ACICULATE_APP_ORIGIN: '${ACICULATE_APP_ORIGIN}'
+      ACICULATE_API_PORT: '${ACICULATE_API_PORT}'
+      ACICULATE_API_ORIGIN: '${ACICULATE_API_ORIGIN}'
+volumes:
+  db-data:
+    driver: local
