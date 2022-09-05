@@ -1,5 +1,9 @@
 export enum ApiErrorCode {
-  optimisticConcurencyFailure = 1,
-  databaseInsertError = 2,
-  databaseUpdateError = 3
+  databaseInsertError,
+  databaseUpdateError,
+  databaseLookupError,
+  databaseDeleteError,
+  datbaseSchemaConfigurationError,
+  databseSchemaValidationError,
+  databaseOptimisticConcurencyError
 }

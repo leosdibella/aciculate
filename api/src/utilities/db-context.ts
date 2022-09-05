@@ -1,202 +1,149 @@
 import { Pool } from 'pg';
+import format from 'pg-format';
+import { DbEntity, DbEntitySchema } from '../types';
+import { IBaseModel, IDbContext, IDbEntityStatic } from '../interfaces';
 import {
-  DbColumn,
-  DbEntity,
-  DbEntitySchema,
-  StringColumn,
-  PrimaryKeyColumn,
-  ForeignKeyColumn
-} from '../types';
-import { IBaseEntity, IDbContext, IDbEntityStatic } from '../interfaces';
-import { dbSerializeDate, dbSerializeField } from './db-functions';
-import { DbColumnType } from '../enums';
+  generateTableColumnDefinitions,
+  getColumnNamesAndValues
+} from './db-functions';
+import { ApiError } from '@shared/classes';
+import { ApiErrorCode } from '@shared/enums';
 
 const pool = new Pool();
 
-function generateTableColumnDefinitions<T extends Partial<IBaseEntity>>(
-  schema: Record<DbEntitySchema<T>, DbColumn>
-): string[] {
-  const columns: string[] = [];
+async function get<T extends Partial<IBaseModel>>(record: DbEntity<T>) {
+  const EntityConstructor = record.constructor as IDbEntityStatic<T>;
 
-  (Object.keys(schema) as (keyof typeof schema)[]).forEach((k) => {
-    const column = schema[k];
+  const query = format(
+    `SELECT * FROM ${EntityConstructor.tableName} WHERE id = %L`,
+    record.id
+  );
 
-    const typeLength =
-      column.type === DbColumnType.varchar ? `(${column.length})` : '';
+  const result = await pool.query<Required<T>>(query);
 
-    const typeText = `${column.type}${typeLength}`;
+  if (result.rows.length !== 1) {
+    throw new ApiError([
+      {
+        errorCode: ApiErrorCode.databaseLookupError,
+        message: `Record of type ${EntityConstructor.name} with id = '${record.id}' not found.`
+      }
+    ]);
+  }
 
-    const primaryKeyText = (column as PrimaryKeyColumn).isPrimaryKey
-      ? ' PRIMARY KEY '
-      : '';
+  return new EntityConstructor(result.rows[0]).toModel();
+}
 
-    const nullableText =
-      (column as StringColumn).isNullable || primaryKeyText ? '' : ' NOT NULL ';
+async function insert<T extends Partial<IBaseModel>>(record: DbEntity<T>) {
+  record.validateInsert();
 
-    const defaultText =
-      (column as StringColumn).defaultValue !== undefined
-        ? ` DEFAULT ${(column as StringColumn).defaultValue} `
-        : '';
+  const EntityConstructor = record.constructor as IDbEntityStatic<T>;
+  const { columnNames, columnValues } = getColumnNamesAndValues(record);
 
-    const forgienKeyText = (column as ForeignKeyColumn).foreignKeyTable
-      ? ` REFERENCES ${(column as ForeignKeyColumn).foreignKeyTable}(${
-          (column as ForeignKeyColumn).foreignKeyColumn
-        }) `
-      : '';
+  const query = format(
+    `INSERT INTO ${
+      EntityConstructor.tableName
+    } (${columnNames.join()}) VALUES %L`,
+    columnValues
+  );
 
-    const casecadeText = (column as ForeignKeyColumn).cascadeOnDelete
-      ? ' ON DELETE CASCADE '
-      : '';
+  const result = await pool.query(query);
 
-    columns.push(
-      `${k} ${typeText}${primaryKeyText}${nullableText}${defaultText}${forgienKeyText}${casecadeText};`
-    );
+  if (result.rows.length !== 1) {
+    throw new ApiError([
+      {
+        errorCode: ApiErrorCode.databaseInsertError,
+        message: `Record of type ${
+          EntityConstructor.name
+        } with value '${record.toJson()}' could not be inserted.`
+      }
+    ]);
+  }
+
+  return new EntityConstructor(result.rows[0] as T).toModel();
+}
+
+async function update<T extends Partial<IBaseModel>>(record: DbEntity<T>) {
+  const EntityConstructor = record.constructor as IDbEntityStatic<T>;
+  const oldValue = await get(record);
+
+  record.validateUpdate(oldValue);
+  const { columnNames, columnValues } = getColumnNamesAndValues(record);
+
+  columnNames.push('updatedDate' as DbEntitySchema<T>);
+  columnValues.push(new Date());
+
+  const setters = columnNames
+    .map((cn, i) => format('%s = %L', cn, columnValues[i]))
+    .join();
+
+  const query = format(
+    `UPDATE ${EntityConstructor.tableName} SET %s WHERE id = %L`,
+    setters,
+    record.id
+  );
+
+  const result = await pool.query<Required<T>>(query);
+
+  if (result.rowCount !== 1) {
+    throw new ApiError([
+      {
+        errorCode: ApiErrorCode.databaseInsertError,
+        message: `Record of type ${
+          EntityConstructor.name
+        } with value '${record.toJson()}' could not be updated.`
+      }
+    ]);
+  }
+
+  const newValue = { ...oldValue };
+
+  columnNames.forEach((cn, i) => {
+    newValue[cn] = columnValues[i] as DbEntity<T>[DbEntitySchema<T>];
   });
 
-  return columns;
+  return newValue;
+}
+
+async function hardDelete<T extends Partial<IBaseModel>>(record: DbEntity<T>) {
+  const EntityConstructor = record.constructor as IDbEntityStatic<T>;
+
+  const query = format(
+    `DELETE FROM ${EntityConstructor.tableName} WHERE id = %L`,
+    record.id
+  );
+
+  const result = await pool.query(query);
+
+  if (result.rowCount !== 1) {
+    throw new ApiError([
+      {
+        errorCode: ApiErrorCode.databaseDeleteError,
+        message: `Record of type ${EntityConstructor.name} with id = '${record.id}' was not deleted.`
+      }
+    ]);
+  }
+
+  return;
 }
 
 export const databaseContext: IDbContext = {
-  async insert<T extends Partial<IBaseEntity>>(record: DbEntity<T>) {
-    const errorMessage = record.isValidInsert();
-    const constructor = record.constructor as unknown as IDbEntityStatic<T>;
-    const columns: DbEntitySchema<T>[] = [];
-    const values: string[] = [];
-
-    if (errorMessage) {
-      throw Error(errorMessage);
-    }
-
-    if (typeof constructor.tableName !== 'string' || !constructor.tableName) {
-      throw Error(
-        `${record.constructor.name} is not of type IDbEntityStatic and is missing a tableName.`
-      );
-    }
-
-    if (typeof constructor.schema !== 'object' || !constructor.schema) {
-      throw Error(
-        `${record.constructor.name} is not of type IDbEntityStatic and is missing a schema.`
-      );
-    }
-
-    (Object.keys(constructor.schema) as DbEntitySchema<T>[])
-      .filter((k) => constructor.immutableColumns.indexOf(k) === -1)
-      .forEach((k) => {
-        const value = dbSerializeField(k, record);
-
-        if (value !== undefined) {
-          columns.push(k);
-          values.push(value);
-        }
-      });
-
-    const result = await pool.query(
-      `INSERT INTO ${
-        constructor.tableName
-      } (${columns.join()}) VALUES (${values.join()})`
-    );
-
-    if (result.rows.length !== 1) {
-      throw Error();
-    }
-
-    return new (record.constructor as IDbEntityStatic<T>)(
-      result.rows[0] as T
-    ).toModel();
-  },
-  async update<T extends Partial<IBaseEntity>>(record: DbEntity<T>) {
-    const constructor = record.constructor as unknown as IDbEntityStatic<T>;
-
-    if (typeof constructor.tableName !== 'string' || !constructor.tableName) {
-      throw Error(
-        `${record.constructor.name} is not of type IDbEntityStatic and is missing a tableName.`
-      );
-    }
-
-    if (typeof constructor.schema !== 'object' || !constructor.schema) {
-      throw Error(
-        `${record.constructor.name} is not of type IDbEntityStatic and is missing a schema.`
-      );
-    }
-
-    const existing = await pool.query<Required<T>>(
-      `SELECT * FROM ${constructor.tableName} WHERE id = '${record.id}'`
-    );
-
-    if (existing.rows.length === 0) {
-      throw Error(
-        `No record found in table ${constructor.tableName} with id: '${record.id}'`
-      );
-    }
-
-    const oldValue = new (record.constructor as IDbEntityStatic<T>)(
-      existing.rows[0]
-    ).toModel();
-
-    const errorMessage = record.isValidUpdate(oldValue);
-
-    if (errorMessage) {
-      throw Error(errorMessage);
-    }
-
-    const columnValues: string[] = [];
-
-    (Object.keys(constructor.schema) as DbEntitySchema<T>[])
-      .filter(
-        (k) =>
-          constructor.immutableColumns.indexOf(k as DbEntitySchema<T>) === -1
-      )
-      .forEach((k) => {
-        const value = dbSerializeField(k, record);
-
-        if (value !== undefined) {
-          columnValues.push(`${String(k)} = ${value}`);
-        }
-      });
-
-    columnValues.push(`updateDate = ${dbSerializeDate(new Date())}`);
-
-    const result = await pool.query<Required<T>>(
-      `UPDATE ${constructor.tableName} SET ${columnValues.join(
-        ','
-      )} WHERE id = '${record.id}'`
-    );
-
-    if (result.rows.length !== 1) {
-      throw Error();
-    }
-
-    return new (record.constructor as IDbEntityStatic<T>)(
-      result.rows[0]
-    ).toModel();
-  },
-  async hardDelete<T extends Partial<IBaseEntity>>(record: DbEntity<T>) {
-    const constructor = record.constructor as unknown as IDbEntityStatic<T>;
-
-    if (typeof constructor.tableName !== 'string' || !constructor.tableName) {
-      throw Error(
-        `${record.constructor.name} is not of type IDbEntityStatic and is missing a tableName.`
-      );
-    }
-
-    await pool.query(
-      `DELETE FROM ${constructor.tableName} WHERE id = '${record.id}'`
-    );
-
-    return;
-  },
-  async query(tableName: TableName) {
-
-  },
-  async migrate(entities: IDbEntityStatic<IBaseEntity>[]) {
+  get,
+  insert,
+  update,
+  hardDelete,
+  async migrate(entities: IDbEntityStatic<IBaseModel>[]) {
     for (let i = 0; i < entities.length; ++i) {
-      const entity = entities[i];
-      const columns = generateTableColumnDefinitions(entity.schema);
+      const EntityConstructor = entities[i];
+
+      const columns = generateTableColumnDefinitions(
+        EntityConstructor.tableName,
+        EntityConstructor.schema
+      );
 
       await pool.query(
-        `CREATE TABLE IF NOT EXISTS ${entity.tableName} (${columns.join(
-          ',\n'
-        )})`
+        `CREATE TABLE IF NOT EXISTS ${
+          EntityConstructor.tableName
+        } (${columns.join(',\n')})`
       );
     }
 

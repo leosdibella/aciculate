@@ -1,8 +1,8 @@
-import { IBaseEntity } from './base-entity';
-import { IApiError } from '@shared/interfaces';
+import { IBaseModel } from './base-model';
 
-export interface IDbEntity<T extends Partial<IBaseEntity>> {
-  isValidInsert(): IApiError[];
-  isValidUpdate(oldValue: Required<T>): IApiError[];
+export interface IDbEntity<T extends Partial<IBaseModel>> {
+  validateInsert(): void;
+  validateUpdate(oldValue: Required<T>): void;
   toModel(): Required<T>;
+  toJson(): string;
 }

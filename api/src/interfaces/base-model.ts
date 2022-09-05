@@ -1,4 +1,4 @@
-export interface IBaseEntity {
+export interface IBaseModel {
   id: string;
   createdDate: Date;
   updatedDate: Date;

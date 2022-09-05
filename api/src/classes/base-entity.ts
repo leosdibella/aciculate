@@ -1,11 +1,12 @@
-import { DbEntitySchema } from '../types';
-import { ApiErrorCode } from '@shared/enums';
+import { DbEntity, DbEntitySchema } from '../types';
 import { DbColumnType } from '../enums';
-import { IBaseEntity } from '../interfaces';
+import { IBaseModel, IDbEntityStatic } from '../interfaces';
 import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
+import { validateColumnValues } from '../utilities';
+import { ApiError } from '@shared/classes';
 
-export abstract class BaseEntity implements Partial<IBaseEntity> {
+export abstract class BaseEntity implements Partial<IBaseModel> {
   public static schema = {
     id: Object.freeze({
       isPrimaryKey: true,
@@ -26,58 +27,54 @@ export abstract class BaseEntity implements Partial<IBaseEntity> {
     })
   };
 
-  public static immutableColumns: DbEntitySchema<IBaseEntity>[] = [
-    'id',
-    'updatedDate',
-    'createdDate'
-  ];
+  protected static _immutableColumns: Readonly<
+    DbEntitySchema<Partial<IBaseModel>>[]
+  > = Object.freeze(['id', 'updatedDate', 'createdDate']);
 
-  protected _id?: string;
-  protected _createdDate?: Date;
-  protected _updatedDate?: Date;
+  public static validateInsert<T extends IBaseModel>(
+    newValue: DbEntity<Partial<T>>
+  ) {
+    validateColumnValues(newValue);
+  }
 
-  public static isValidInsert<T extends Partial<BaseEntity>>(
-    newValue: T
-  ): IApiError[] {
+  public static validateUpdate<T extends IBaseModel>(
+    newValue: DbEntity<Partial<T>>,
+    oldValue: Required<T>
+  ) {
+    validateColumnValues(newValue, oldValue);
+  }
+
+  public static toModel<T extends IBaseModel>(
+    record: DbEntity<Partial<T>>
+  ): Required<T> {
     const errors: IApiError[] = [];
+    const schema = (record.constructor as IDbEntityStatic<T>).schema;
+    const model: Partial<T> = {};
 
-    if (newValue.id) {
-      errors.push({
-        errorCode: ApiErrorCode.databaseInsertError,
-        message: `Attempted to insert record of type: ${newValue.constructor.name} with id: ${newValue}, ids are auto generated at the database level.`
-      });
+    (Object.keys(schema) as DbEntitySchema<T>[]).forEach((k) => {
+      if (record[k] === undefined) {
+        errors.push();
+      } else {
+        model[k] = record[k];
+      }
+    });
+
+    if (errors.length) {
+      throw new ApiError(errors);
     }
 
-    if (newValue.createdDate) {
-      errors.push({
-        errorCode: ApiErrorCode.databaseInsertError,
-        message: `Attempted to insert record of type: ${newValue.constructor.name}, createdDate is auto generated at the database level.`
-      });
-    }
-
-    if (newValue.updatedDate) {
-      errors.push({
-        errorCode: ApiErrorCode.databaseInsertError,
-        message: `Attempted to insert record of type: ${newValue.constructor.name}, updateDate is auto generated at the database level.`
-      });
-    }
-
-    return errors;
+    return model as Required<T>;
   }
 
-  public static isValidUpdate<T extends IBaseEntity>(
-    oldValue: T,
-    newValue: Partial<T>
-  ): IApiError[] {
-    return oldValue.updatedDate !== newValue.updatedDate
-      ? [
-          {
-            errorCode: ApiErrorCode.optimisticConcurencyFailure,
-            message: `Record of type: ${oldValue.constructor.name}, with id: '${oldValue.id}' has mismatched timestamps`
-          }
-        ]
-      : [];
+  public static toJson<T extends IBaseModel>(
+    record: DbEntity<Partial<T>>
+  ): string {
+    return JSON.stringify(record.toModel());
   }
+
+  protected readonly _id?: string;
+  protected readonly _createdDate?: Date;
+  protected readonly _updatedDate?: Date;
 
   public deleted?: boolean;
 
@@ -93,41 +90,10 @@ export abstract class BaseEntity implements Partial<IBaseEntity> {
     return this._updatedDate;
   }
 
-  public toModel(): Required<IBaseEntity> | IApiError[] {
-    const errors: IApiError[] = [];
-
-    if (this.id === undefined) {
-      errors.push();
-    }
-
-    if (this.createdDate === undefined) {
-      errors.push();
-    }
-
-    if (this.updatedDate === undefined) {
-      errors.push();
-    }
-
-    if (this.deleted === undefined) {
-      errors.push();
-    }
-
-    if (errors.length) {
-      return errors;
-    }
-
-    return {
-      id: this.id!,
-      deleted: this.deleted!,
-      updatedDate: this.updatedDate!,
-      createdDate: this.createdDate!
-    };
-  }
-
-  public constructor(baseEntity: Partial<IBaseEntity>) {
-    this._id = baseEntity.id;
-    this._createdDate = sanitizeDate(baseEntity.createdDate);
-    this.deleted = baseEntity.deleted;
-    this._updatedDate = sanitizeDate(baseEntity.updatedDate);
+  public constructor(model: Partial<IBaseModel>) {
+    this._id = model.id;
+    this._createdDate = sanitizeDate(model.createdDate);
+    this.deleted = model.deleted;
+    this._updatedDate = sanitizeDate(model.updatedDate);
   }
 }

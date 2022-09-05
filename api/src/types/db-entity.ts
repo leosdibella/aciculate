@@ -1,3 +1,3 @@
-import { IBaseEntity, IDbEntity } from '../interfaces';
+import { IBaseModel, IDbEntity } from '../interfaces';
 
-export type DbEntity<T extends Partial<IBaseEntity>> = IDbEntity<T> & T;
+export type DbEntity<T extends Partial<IBaseModel>> = IDbEntity<T> & T;

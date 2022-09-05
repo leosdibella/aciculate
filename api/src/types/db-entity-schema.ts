@@ -1,6 +1,6 @@
-import { IBaseEntity, IDbEntity } from '../interfaces';
+import { IBaseModel, IDbEntity } from '../interfaces';
 
-export type DbEntitySchema<T extends Partial<IBaseEntity>> = Exclude<
+export type DbEntitySchema<T extends Partial<IBaseModel>> = Exclude<
   keyof T,
   keyof IDbEntity<T>
 > &

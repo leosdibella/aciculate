@@ -1,6 +1,6 @@
 import { ApiErrorCode } from '../enums';
 
 export interface IApiError {
-  errorCode: ApiErrorCode;
-  message: string;
+  readonly errorCode: ApiErrorCode;
+  readonly message: string;
 }
