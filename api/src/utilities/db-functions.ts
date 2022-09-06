@@ -1,5 +1,5 @@
-import { IDbEntityStatic, IBaseModel } from '../interfaces';
-import { DbColumn, DbEntity, DbEntitySchema, StringColumn } from '../types';
+import { IBaseModel } from '../interfaces';
+import { DbColumn, DbEntity, StringColumn } from '../types';
 import { DbColumnType } from '../enums';
 import { isPositiveInteger } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
@@ -8,7 +8,7 @@ import { ApiError } from '@shared/classes';
 
 function getSchemaValidationError<T extends IBaseModel>(
   tableName: DbTableName,
-  columnName: DbEntitySchema<T>,
+  columnName: Extract<keyof T, string>,
   fieldValue: string | undefined | null,
   remainingText: string,
   errorCode:
@@ -26,7 +26,7 @@ function getSchemaValidationError<T extends IBaseModel>(
 
 function getSchemaConfigurationError<T extends IBaseModel>(
   tableName: DbTableName,
-  columnName: DbEntitySchema<T>,
+  columnName: Extract<keyof T, string>,
   column: DbColumn,
   remainingText: string
 ) {
@@ -38,7 +38,7 @@ function getSchemaConfigurationError<T extends IBaseModel>(
 
 function validateStringColumnValue<T extends IBaseModel>(
   tableName: DbTableName,
-  columnName: DbEntitySchema<T>,
+  columnName: Extract<keyof T, string>,
   column: StringColumn,
   fieldValue: string | undefined | null,
   id?: string
@@ -86,110 +86,99 @@ function validateStringColumnValue<T extends IBaseModel>(
 }
 
 export function validateColumnValues<T extends IBaseModel>(
-  newValue: DbEntity<Partial<T>>,
-  oldValue?: Required<T>
+  entity: DbEntity<T>,
+  model?: T
 ) {
   const errors: IApiError[] = [];
-  const EntityConstructor = newValue.constructor as IDbEntityStatic<T>;
 
-  if (newValue.id !== undefined) {
+  if (entity.id !== undefined) {
     errors.push(
       getSchemaValidationError(
-        EntityConstructor.tableName,
+        entity.tableName,
         'id',
-        newValue.id,
+        entity.id,
         'ids are auto-generated at the database level'
       )
     );
 
-    if (oldValue && newValue.id !== oldValue.id) {
+    if (model && entity.id !== model.id) {
       errors.push(
         getSchemaValidationError(
-          EntityConstructor.tableName,
+          entity.tableName,
           'id',
-          newValue.id,
+          entity.id,
           'ids are immutable',
           ApiErrorCode.databseSchemaValidationError,
-          oldValue.id
+          model.id
         )
       );
     }
   }
 
-  if (newValue.createdDate !== undefined) {
+  if (entity.createdDate !== undefined) {
     errors.push(
       getSchemaValidationError(
-        EntityConstructor.tableName,
+        entity.tableName,
         'createdDate',
-        newValue.createdDate.toISOString(),
+        entity.createdDate.toISOString(),
         `createdDate is auto-generated at the database level`,
         ApiErrorCode.databseSchemaValidationError,
-        newValue.id
+        entity.id
       )
     );
 
-    if (
-      oldValue &&
-      newValue.createdDate.getTime() !== oldValue.createdDate.getTime()
-    ) {
+    if (model && entity.createdDate.getTime() !== model.createdDate.getTime()) {
       getSchemaValidationError(
-        EntityConstructor.tableName,
+        entity.tableName,
         'createdDate',
-        newValue.createdDate.toISOString(),
-        `mismatched createdDate values, createdDate is immutable, createdDate for existing record: '${oldValue.createdDate.toISOString()}'`,
+        entity.createdDate.toISOString(),
+        `mismatched createdDate values, createdDate is immutable, createdDate for existing record: '${model.createdDate.toISOString()}'`,
         ApiErrorCode.databseSchemaValidationError,
-        oldValue.id
+        model.id
       );
     }
   }
 
-  if (newValue.updatedDate !== undefined) {
+  if (entity.updatedDate !== undefined) {
     errors.push(
       getSchemaValidationError(
-        EntityConstructor.tableName,
+        entity.tableName,
         'updatedDate',
-        newValue.updatedDate.toISOString(),
+        entity.updatedDate.toISOString(),
         `updatedDate is auto-generated at the database level`,
         ApiErrorCode.databseSchemaValidationError,
-        newValue.id
+        entity.id
       )
     );
 
-    if (
-      oldValue &&
-      newValue.updatedDate.getTime() !== oldValue.updatedDate.getTime()
-    ) {
+    if (model && entity.updatedDate.getTime() !== model.updatedDate.getTime()) {
       errors.push(
         getSchemaValidationError(
-          EntityConstructor.tableName,
+          entity.tableName,
           'updatedDate',
-          newValue.updatedDate.toISOString(),
+          entity.updatedDate.toISOString(),
           `updatedDate has mismatched timestamps, this record has been modified since last accessed, please confirm your changes and retry`,
           ApiErrorCode.databaseOptimisticConcurencyError,
-          newValue.id
+          model.id
         )
       );
     }
   }
 
-  (Object.keys(EntityConstructor.schema) as DbEntitySchema<T>[])
-    .filter(
-      (k) =>
-        EntityConstructor.immutableColumns.indexOf(k as DbEntitySchema<T>) ===
-        -1
-    )
+  (Object.keys(entity.schema) as Extract<keyof T, string>[])
+    .filter((k) => entity.immutableColumns.indexOf(k) === -1)
     .forEach((columnName) => {
       let columnErrors: IApiError[] | undefined;
-      const column = EntityConstructor.schema[columnName];
-      const columnValue = newValue[columnName];
+      const column = entity.schema[columnName];
+      const columnValue = entity[columnName];
 
       if (column.type === DbColumnType.varchar) {
         columnErrors = validateStringColumnValue(
-          EntityConstructor.tableName,
+          entity.tableName,
           columnName,
           column,
           columnValue as string | null | undefined,
-          oldValue?.id
+          model?.id
         );
       } else if (
         !column.isNullable &&
@@ -197,12 +186,12 @@ export function validateColumnValues<T extends IBaseModel>(
       ) {
         errors.push(
           getSchemaValidationError(
-            EntityConstructor.tableName,
+            entity.tableName,
             columnName,
             null,
             `the column ${columnName} does not allow null values`,
             ApiErrorCode.databseSchemaValidationError,
-            newValue.id
+            entity.id
           )
         );
       }
@@ -221,7 +210,7 @@ export function validateColumnValues<T extends IBaseModel>(
 
 function validateColumnConfiguration<T extends IBaseModel>(
   tableName: DbTableName,
-  columnName: DbEntitySchema<T>,
+  columnName: Extract<keyof T, string>,
   column: DbColumn
 ) {
   const errors: IApiError[] = [];
@@ -268,12 +257,12 @@ function validateColumnConfiguration<T extends IBaseModel>(
 
 export function generateTableColumnDefinitions<T extends IBaseModel>(
   tableName: DbTableName,
-  schema: Record<DbEntitySchema<T>, DbColumn>
+  schema: Record<keyof T, DbColumn>
 ): string[] {
   const columns: string[] = [];
   const apiErrors: IApiError[] = [];
 
-  (Object.keys(schema) as DbEntitySchema<T>[]).forEach((columnName) => {
+  (Object.keys(schema) as Extract<keyof T, string>[]).forEach((columnName) => {
     const column = schema[columnName];
 
     const { typeModifierText, errors } = validateColumnConfiguration(
@@ -313,20 +302,16 @@ export function generateTableColumnDefinitions<T extends IBaseModel>(
   return columns;
 }
 
-export function getColumnNamesAndValues<T extends Partial<IBaseModel>>(
-  record: DbEntity<T>
+export function getColumnNamesAndValues<T extends IBaseModel>(
+  entity: DbEntity<T>
 ) {
-  const EntityConstructor = record.constructor as IDbEntityStatic<T>;
-  const columnNames: DbEntitySchema<T>[] = [];
+  const columnNames: Extract<keyof T, string>[] = [];
   const columnValues: unknown[] = [];
 
-  (Object.keys(EntityConstructor.schema) as DbEntitySchema<T>[])
-    .filter(
-      (columnName) =>
-        EntityConstructor.immutableColumns.indexOf(columnName) === -1
-    )
+  (Object.keys(entity.schema) as Extract<keyof T, string>[])
+    .filter((columnName) => entity.immutableColumns.indexOf(columnName) === -1)
     .forEach((columnName) => {
-      const value = record[columnName];
+      const value = entity[columnName];
 
       if (value !== undefined) {
         columnNames.push(columnName);

@@ -1,17 +1,24 @@
 import { DbTableName } from '@shared/enums';
 import { DbColumnType } from 'src/enums';
-import { staticDecorator } from '../decorators';
-import { ICalendarModel, IDbEntity, IDbEntityStatic } from '../interfaces';
+import { DbEntity } from 'src/types';
+import { ICalendarModel } from '../interfaces';
 import { BaseEntity } from './base-entity';
 
-@staticDecorator<IDbEntityStatic<Partial<ICalendarModel>>>()
 export class CalendarEntity
   extends BaseEntity
-  implements IDbEntity<ICalendarModel>, Partial<ICalendarModel>
+  implements DbEntity<ICalendarModel>
 {
-  public static readonly tableName = DbTableName.calendar;
+  public readonly tableName = DbTableName.calendar;
 
-  public static schema = {
+  public readonly immutableColumns: Readonly<
+    Extract<keyof ICalendarModel, string>[]
+  > = BaseEntity._immutableColumns;
+
+  public data?: unknown | null;
+  public title?: string;
+  public description?: string | null;
+
+  public readonly schema = {
     ...BaseEntity.schema,
     data: Object.freeze({
       type: DbColumnType.json,
@@ -29,36 +36,18 @@ export class CalendarEntity
     })
   };
 
-  public static readonly immutableColumns = BaseEntity._immutableColumns;
+  public fromJson(json: Record<string, unknown>): Partial<ICalendarModel> {
+    const model = BaseEntity.fromJson<ICalendarModel>(json, this.tableName);
 
-  public static fromJson(
-    json: Record<string, unknown>
-  ): Partial<ICalendarModel> {
-    const calendarEntity: Partial<ICalendarModel> = {};
-
-    if (typeof json !== 'object' || !json) {
-      throw Error(
-        `Unable to convert JSON data into ${CalendarEntity.name}, JSON not of type object.`
-      );
-    }
-
-    if (typeof json.id === 'string') {
-      calendarEntity.id = json.id;
-    }
-
-    return new CalendarEntity(calendarEntity);
+    return model;
   }
-
-  public data?: unknown | null;
-  public title?: string;
-  public description?: string | null;
 
   public validateInsert() {
     BaseEntity.validateInsert<ICalendarModel>(this);
   }
 
-  public validateUpdate(oldValue: ICalendarModel) {
-    BaseEntity.validateUpdate<ICalendarModel>(this, oldValue);
+  public validateUpdate(model: ICalendarModel) {
+    BaseEntity.validateUpdate<ICalendarModel>(this, model);
   }
 
   public toModel(): ICalendarModel {

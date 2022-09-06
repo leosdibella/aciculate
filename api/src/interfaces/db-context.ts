@@ -1,15 +1,10 @@
-import { DbEntity } from '../types';
+import { DbEntity, IDbEntityConstructor } from '../types';
 import { IBaseModel } from './base-model';
-import { IDbEntityStatic } from './db-entity-static';
 
 export interface IDbContext {
-  get<T extends Partial<IBaseModel>>(record: DbEntity<T>): Promise<Required<T>>;
-  insert<T extends Partial<IBaseModel>>(
-    record: DbEntity<T>
-  ): Promise<Required<T>>;
-  update<T extends Partial<IBaseModel>>(
-    record: DbEntity<T>
-  ): Promise<Required<T>>;
-  hardDelete<T extends Partial<IBaseModel>>(record: DbEntity<T>): Promise<void>;
-  migrate(entities: IDbEntityStatic<IBaseModel>[]): Promise<void>;
+  get<T extends IBaseModel>(entity: DbEntity<T>): Promise<T>;
+  insert<T extends IBaseModel>(entity: DbEntity<T>): Promise<T>;
+  update<T extends IBaseModel>(entity: DbEntity<T>): Promise<T>;
+  hardDelete<T extends IBaseModel>(entity: DbEntity<T>): Promise<void>;
+  migrateSchema(entityConstructors: IDbEntityConstructor[]): Promise<void>;
 }

@@ -2,6 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import { calendarRouter, calendarEventRouter } from './routers';
 import { DbTableName } from '@shared/enums';
+import { registry } from '@shared/utilities';
+import { IDbContext } from './interfaces';
+import { CalendarEntity, DbContext } from './classes';
+import { DependencyInjectionToken } from './enums';
+
+const dbContext = new DbContext();
+
+dbContext.migrateSchema([CalendarEntity]);
+
+registry.provide<IDbContext>(DependencyInjectionToken.dbContext, dbContext);
 
 const app = express();
 const port = Number(process.env.ACICULATE_API_PORT);

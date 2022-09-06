@@ -1,16 +1,26 @@
+import { registry } from '@shared/utilities';
 import Router from 'express-promise-router';
-import { Pool } from 'pg';
+import { CalendarEntity } from 'src/classes';
+import { DependencyInjectionToken } from '../enums';
+import { IDbContext } from '../interfaces';
 
 // eslint-disable-next-line new-cap
 const calendarRouter = Router();
-const pool = new Pool();
 
 calendarRouter.get('/:id', async (req, res) => {
-  const doesCalendarDatabaseExist = await pool.query(
-    `SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('${process.env.PGDATABASE}');`
-  );
+  const id = req.params.id;
 
-  return res.send(doesCalendarDatabaseExist);
+  const context = registry.inject<IDbContext>(
+    DependencyInjectionToken.dbContext
+  )!;
+
+  const entity = new CalendarEntity({
+    id
+  });
+
+  const model = await context.get(entity);
+
+  return res.send(model);
 });
 
 export { calendarRouter };

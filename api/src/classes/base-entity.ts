@@ -1,10 +1,11 @@
-import { DbEntity, DbEntitySchema } from '../types';
+import { DbEntity } from '../types';
 import { DbColumnType } from '../enums';
-import { IBaseModel, IDbEntityStatic } from '../interfaces';
+import { IBaseModel } from '../interfaces';
 import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
 import { validateColumnValues } from '../utilities';
 import { ApiError } from '@shared/classes';
+import { DbTableName } from '@shared/enums';
 
 export abstract class BaseEntity implements Partial<IBaseModel> {
   public static schema = {
@@ -28,34 +29,29 @@ export abstract class BaseEntity implements Partial<IBaseModel> {
   };
 
   protected static _immutableColumns: Readonly<
-    DbEntitySchema<Partial<IBaseModel>>[]
+    Extract<keyof IBaseModel, string>[]
   > = Object.freeze(['id', 'updatedDate', 'createdDate']);
 
-  public static validateInsert<T extends IBaseModel>(
-    newValue: DbEntity<Partial<T>>
-  ) {
-    validateColumnValues(newValue);
+  public static validateInsert<T extends IBaseModel>(entity: DbEntity<T>) {
+    validateColumnValues(entity);
   }
 
   public static validateUpdate<T extends IBaseModel>(
-    newValue: DbEntity<Partial<T>>,
-    oldValue: Required<T>
+    entity: DbEntity<T>,
+    model: T
   ) {
-    validateColumnValues(newValue, oldValue);
+    validateColumnValues(entity, model);
   }
 
-  public static toModel<T extends IBaseModel>(
-    record: DbEntity<Partial<T>>
-  ): Required<T> {
+  public static toModel<T extends IBaseModel>(entity: DbEntity<T>): T {
     const errors: IApiError[] = [];
-    const schema = (record.constructor as IDbEntityStatic<T>).schema;
     const model: Partial<T> = {};
 
-    (Object.keys(schema) as DbEntitySchema<T>[]).forEach((k) => {
-      if (record[k] === undefined) {
+    (Object.keys(entity.schema) as Extract<keyof T, string>[]).forEach((k) => {
+      if (entity[k] === undefined) {
         errors.push();
       } else {
-        model[k] = record[k];
+        model[k] = entity[k] as unknown as T[Extract<keyof T, string>];
       }
     });
 
@@ -63,13 +59,31 @@ export abstract class BaseEntity implements Partial<IBaseModel> {
       throw new ApiError(errors);
     }
 
-    return model as Required<T>;
+    return model as T;
   }
 
-  public static toJson<T extends IBaseModel>(
-    record: DbEntity<Partial<T>>
-  ): string {
-    return JSON.stringify(record.toModel());
+  public static toJson<T extends IBaseModel>(entity: DbEntity<T>): string {
+    return JSON.stringify(entity.toModel());
+  }
+
+  public static fromJson<T extends IBaseModel>(
+    json: Record<string, unknown>,
+    tableName: DbTableName
+  ): Partial<T> {
+    const model = {} as Partial<T>;
+
+    if (typeof json !== 'object' || !json) {
+      // TODO
+      throw Error(
+        `Unable to convert JSON data into ${tableName}, JSON not of type object.`
+      );
+    }
+
+    if (typeof json.id === 'string') {
+      model.id = json.id;
+    }
+
+    return model;
   }
 
   protected readonly _id?: string;
