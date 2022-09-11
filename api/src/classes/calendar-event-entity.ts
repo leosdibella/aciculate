@@ -4,7 +4,7 @@ import { DbEntity } from 'src/types';
 import { ICalendarModel } from '../interfaces';
 import { BaseEntity } from './base-entity';
 
-export class CalendarEntity
+export class CalendarEventEntity
   extends BaseEntity
   implements DbEntity<ICalendarModel>
 {
@@ -33,26 +33,7 @@ export class CalendarEntity
       type: DbColumnType.varchar,
       maxLength: 1024,
       isNullable: true
-    }),
-    userId: Object.freeze({
-      type: DbColumnType.uuid,
-      isNullable: true,
-      foreignKeyTable: DbTableName.user,
-      foreignKeyColumn: 'id'
-    }),
-    organizationId: Object.freeze({
-      type: DbColumnType.uuid,
-      isNullable: true,
-      foreignKeyTable: DbTableName.organization,
-      foreignKeyColumn: 'id'
-    }),
-    isPrivate: Object.freeze({
-      type: DbColumnType.boolean,
-      defaultValue: false
-    }),
-    organization: null,
-    user: null,
-    calendarEvents: null
+    })
   };
 
   public fromJson(json: Record<string, unknown>): Partial<ICalendarModel> {

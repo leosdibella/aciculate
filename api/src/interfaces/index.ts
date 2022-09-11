@@ -2,3 +2,8 @@ export * from './base-model';
 export * from './db-entity';
 export * from './calendar-model';
 export * from './db-context';
+export * from './calendar-event-model';
+export * from './organization-calendar-model';
+export * from './organization-model';
+export * from './user-model';
+export * from './organization-user-model';

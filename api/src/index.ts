@@ -9,7 +9,10 @@ import { DependencyInjectionToken } from './enums';
 
 const dbContext = new DbContext();
 
-dbContext.migrateSchema([CalendarEntity]);
+dbContext.migrateSchema({
+  [DbTableName.calendar]: new CalendarEntity({}).schema,
+  [DbTableName.calendarEvent]: {}
+});
 
 registry.provide<IDbContext>(DependencyInjectionToken.dbContext, dbContext);
 

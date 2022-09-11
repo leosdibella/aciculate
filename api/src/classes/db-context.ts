@@ -1,13 +1,13 @@
 import { Pool } from 'pg';
 import format from 'pg-format';
-import { DbEntity, IDbEntityConstructor } from '../types';
+import { DbColumn, DbEntity, IDbEntityConstructor } from '../types';
 import { IBaseModel, IDbContext } from '../interfaces';
 import {
   generateTableColumnDefinitions,
   getColumnNamesAndValues
 } from '../utilities';
 import { ApiError } from '@shared/classes';
-import { ApiErrorCode } from '@shared/enums';
+import { ApiErrorCode, DbTableName } from '@shared/enums';
 
 export class DbContext implements IDbContext {
   #pool = new Pool();
@@ -123,20 +123,15 @@ export class DbContext implements IDbContext {
     return;
   }
 
-  async migrateSchema(entityConstructors: IDbEntityConstructor[]) {
-    for (let i = 0; i < entityConstructors.length; ++i) {
-      const EntityConstructor = entityConstructors[i];
-      const entity = new EntityConstructor({});
+  async migrateSchema(tables: Record<DbTableName, Record<string, DbColumn>>) {
+    const tableNames = Object.keys(tables) as DbTableName[];
 
-      const columns = generateTableColumnDefinitions(
-        entity.tableName,
-        entity.schema
-      );
+    for (let i = 0; i < tableNames.length; ++i) {
+      const schema = tables[tableNames[i]];
+      const columns = generateTableColumnDefinitions(tableNames[i], schema);
 
       await this.#pool.query(
-        `CREATE TABLE IF NOT EXISTS ${entity.tableName} (${columns.join(
-          ',\n'
-        )})`
+        `CREATE TABLE IF NOT EXISTS ${tableNames[i]} (${columns.join(',\n')})`
       );
     }
 

@@ -172,6 +172,10 @@ export function validateColumnValues<T extends IBaseModel>(
       const column = entity.schema[columnName];
       const columnValue = entity[columnName];
 
+      if (!column) {
+        return;
+      }
+
       if (column.type === DbColumnType.varchar) {
         columnErrors = validateStringColumnValue(
           entity.tableName,

@@ -10,7 +10,7 @@ export interface IDbEntity<T extends IBaseModel> {
   fromJson(json: Record<string, unknown>): Partial<T>;
   readonly tableName: DbTableName;
   readonly schema: Readonly<
-    Record<Extract<keyof T, string>, Readonly<DbColumn>>
+    Record<Extract<keyof T, string>, Readonly<DbColumn> | null>
   >;
   readonly immutableColumns: Readonly<Extract<keyof T, string>[]>;
 }

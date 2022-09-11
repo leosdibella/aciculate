@@ -14,11 +14,7 @@ calendarRouter.get('/:id', async (req, res) => {
     DependencyInjectionToken.dbContext
   )!;
 
-  const entity = new CalendarEntity({
-    id
-  });
-
-  const model = await context.get(entity);
+  const model = await context.get(new CalendarEntity({ id }));
 
   return res.send(model);
 });
