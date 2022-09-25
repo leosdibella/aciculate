@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import format from 'pg-format';
-import { DbEntity, DbSchema, DbTable, IDbEntityConstructor } from '../types';
-import { IBaseModel, IDbContext, IDbSeedData } from '../interfaces';
+import { DbEntity, DbSchema, DbTable } from '../types';
+import { IBaseModel, IDbContext, IDbEntityConstructor } from '../interfaces';
 import {
   generateTableColumnDefinitions,
   getColumnNamesAndValues,
@@ -153,19 +153,27 @@ export class DbContext implements IDbContext {
     return;
   }
 
-  async seed<T extends IBaseModel>(
-    tableName: DbTable<T>,
-    dataFactory: () => IDbSeedData<T>,
-    entityConstructor: IDbEntityConstructor<T>
-  ) {
-    const seedData = dataFactory();
+  async seed<T extends IBaseModel>(entityConstructor: IDbEntityConstructor<T>) {
+    if (!entityConstructor.seed && !entityConstructor.seedAsync) {
+      return;
+    }
+
+    const seedData = entityConstructor.seedAsync
+      ? await entityConstructor.seedAsync()
+      : entityConstructor.seed!();
+
+    const values: T[] = [];
 
     for (let i = 0; i < seedData.conditions.length; ++i) {
       const conditions = seedData.conditions
         .map((c, j) => format('%s = %L', c, seedData.values[j][c]))
         .join(' AND ');
 
-      const query = format(`SELECT * FROM ${tableName} WHERE %s;`, conditions);
+      const query = format(
+        `SELECT * FROM ${entityConstructor.tableName} WHERE %s;`,
+        conditions
+      );
+
       const result = await this.#pool.query(query);
 
       if (result.rows.length > 0) {
@@ -173,7 +181,13 @@ export class DbContext implements IDbContext {
       }
 
       // eslint-disable-next-line new-cap
-      this.insert(new entityConstructor(seedData.values[i]));
+      values.push(await this.insert(new entityConstructor(seedData.values[i])));
+    }
+
+    if (seedData.storeValues && entityConstructor.values !== undefined) {
+      entityConstructor.values = Object.freeze(
+        values.map((v) => Object.freeze(v))
+      );
     }
 
     return;

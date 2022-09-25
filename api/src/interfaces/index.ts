@@ -8,3 +8,7 @@ export * from './organization-model';
 export * from './user-model';
 export * from './organization-user-role-model';
 export * from './db-seed-data';
+export * from './user-service';
+export * from './db-entity-constructor';
+export * from './user-model';
+export * from './create-user-request';

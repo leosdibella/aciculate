@@ -1,13 +1,15 @@
 import { DbTableName, DbColumnType } from '../enums';
 import { DbEntity } from '../types';
-import { validateColumnValues } from '../utilities';
-import { IUserModel } from '../interfaces';
+import { generateHash, generateSalt, validateColumnValues } from '../utilities';
+import { IDbSeedData, IUserModel } from '../interfaces';
 import { BaseEntity } from './base-entity';
 
 export class UserEntity
   extends BaseEntity<IUserModel>
   implements DbEntity<IUserModel>
 {
+  public static readonly tableName = DbTableName.user;
+
   public static readonly schema = {
     ...BaseEntity._schema,
     firstName: Object.freeze({
@@ -41,7 +43,27 @@ export class UserEntity
     calendars: Object.freeze([])
   };
 
-  public readonly tableName = DbTableName.user;
+  public static async seedAsync(): Promise<IDbSeedData<IUserModel>> {
+    const salt = generateSalt();
+
+    return {
+      values: [
+        {
+          firstName: process.env.ACIULCATE_SYSTEM_USER_FIRSTNAME,
+          lastName: process.env.ACIULCATE_SYSTEM_USER_LASTNAME,
+          email: process.env.ACIULCATE_SYSTEM_USER_EMAIL,
+          passwordHash: await generateHash(
+            process.env.ACIULCATE_SYSTEM_USER_PASSWORD || '',
+            salt
+          ),
+          passwordSalt: salt
+        }
+      ],
+      conditions: ['email']
+    };
+  }
+
+  public readonly tableName = UserEntity.tableName;
   public readonly schema = UserEntity.schema;
 
   public readonly userImmutableColumns: Readonly<

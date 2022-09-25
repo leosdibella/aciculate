@@ -5,5 +5,6 @@ export enum ApiErrorCode {
   databaseDeleteError,
   datbaseSchemaConfigurationError,
   databseSchemaValidationError,
-  databaseOptimisticConcurencyError
+  databaseOptimisticConcurencyError,
+  insufficientPermissionsError
 }

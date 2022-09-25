@@ -1,3 +1,4 @@
 export enum DependencyInjectionToken {
-  dbContext = 'dbContext'
+  dbContext = 'dbContext',
+  userService = 'userService'
 }

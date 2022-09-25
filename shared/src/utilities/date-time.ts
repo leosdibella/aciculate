@@ -1,7 +1,9 @@
 import { ApiError } from '../classes';
 import { ApiErrorCode, TimeInterval } from '../enums';
 
+export const secondsPerMinute = 60;
 export const minutesPerHour = 60;
+export const hoursPerDay = 24;
 export const decimalBase = 10;
 
 export function sanitizeDate(value?: Date | string | number): Date | undefined;

@@ -1,6 +1,6 @@
-import { DbEntity, DbSchema, DbTable, IDbEntityConstructor } from '../types';
+import { DbEntity, DbSchema, DbTable } from '../types';
 import { IBaseModel } from './base-model';
-import { IDbSeedData } from './db-seed-data';
+import { IDbEntityConstructor } from './db-entity-constructor';
 
 export interface IDbContext {
   get<T extends IBaseModel>(entity: DbEntity<T>): Promise<T>;
@@ -12,8 +12,6 @@ export interface IDbContext {
     schema: DbSchema<T>
   ): Promise<void>;
   seed<T extends IBaseModel>(
-    tableName: DbTable<IBaseModel>,
-    dataFactory: () => IDbSeedData<T>,
     entityConstructor: IDbEntityConstructor<T>
   ): Promise<void>;
 }

@@ -1,28 +1,36 @@
+import { Role } from '@shared/enums';
 import { registry } from '@shared/utilities';
 import Router from 'express-promise-router';
-import { CalendarEntity } from '../classes';
+import { authenticateToken, authenticateTokenWithRole } from 'src/utilities';
 import { DependencyInjectionToken } from '../enums';
-import { IDbContext, IUserModel } from '../interfaces';
+import { IUserModel, IUserService } from '../interfaces';
 
-// eslint-disable-next-line new-cap
-const userRouter = Router();
+function userRouter() {
+  // eslint-disable-next-line new-cap
+  const router = Router();
 
-userRouter.get('/:id', async (req, res) => {
-  const id = req.params.id;
-
-  const context = registry.inject<IDbContext>(
-    DependencyInjectionToken.dbContext
+  const userService = registry.inject<IUserService>(
+    DependencyInjectionToken.userService
   )!;
 
-  const model = await context.get(new CalendarEntity({ id }));
+  router.get<{ id: string }, unknown, IUserModel>(
+    '/:id',
+    authenticateToken,
+    async (req, res) => {
+      const model = await userService.get(req.params.id);
 
-  return res.send(model);
-});
+      return res.send(model);
+    }
+  );
 
-userRouter.post<Record<string, unknown>, unknown, IUserModel>(
-  '/create',
-  async (req, res) => {
-    
-});
+  router.post<Record<string, unknown>, unknown, IUserModel>(
+    '/create',
+    authenticateTokenWithRole(Role.admin)
+    async (req, res) => {
+      
+  });
+
+  return router;
+}
 
 export { userRouter };

@@ -9,6 +9,9 @@ export class RoleEntity
   extends BaseEntity<IRoleModel>
   implements DbEntity<IRoleModel>
 {
+  private static readonly _values: Partial<Readonly<IRoleModel>>[];
+
+  public static readonly tableName = DbTableName.role;
   public static readonly schema = Object.freeze({
     ...BaseEntity._schema,
     name: Object.freeze({
@@ -21,12 +24,21 @@ export class RoleEntity
   public static seed(): IDbSeedData<IRoleModel> {
     return {
       values: (Object.keys(Role) as Role[]).map((r) => ({ name: r })),
-      conditions: ['name']
+      conditions: ['name'],
+      storeValues: true
     };
   }
 
+  public static set values(values: Readonly<Readonly<Partial<IRoleModel>>[]>) {
+    values.forEach((v) => this._values.push(v));
+  }
+
+  public static get values(): Readonly<Readonly<Partial<IRoleModel>>[]> {
+    return Object.freeze(RoleEntity._values);
+  }
+
   public readonly schema = RoleEntity.schema;
-  public readonly tableName = DbTableName.role;
+  public readonly tableName = RoleEntity.tableName;
   public readonly name?: Role;
 
   public constructor(model: Partial<IRoleModel>) {
