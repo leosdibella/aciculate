@@ -1,25 +1,20 @@
-import { DbTableName } from '@shared/enums';
-import { DbColumnType } from 'src/enums';
-import { DbEntity } from 'src/types';
-import { ICalendarModel } from '../interfaces';
+import { DbTableName, DbColumnType } from '../enums';
+import { DbEntity } from '../types';
+import { validateColumnValues } from '../utilities';
+import {
+  ICalendarEventModel,
+  ICalendarModel,
+  IOrganizationModel,
+  IUserModel
+} from '../interfaces';
 import { BaseEntity } from './base-entity';
 
 export class CalendarEntity
-  extends BaseEntity
+  extends BaseEntity<ICalendarModel>
   implements DbEntity<ICalendarModel>
 {
-  public readonly tableName = DbTableName.calendar;
-
-  public readonly immutableColumns: Readonly<
-    Extract<keyof ICalendarModel, string>[]
-  > = BaseEntity._immutableColumns;
-
-  public data?: unknown | null;
-  public title?: string;
-  public description?: string | null;
-
-  public readonly schema = {
-    ...BaseEntity.schema,
+  public static readonly schema = Object.freeze({
+    ...BaseEntity._schema,
     data: Object.freeze({
       type: DbColumnType.json,
       isNullable: true
@@ -50,37 +45,53 @@ export class CalendarEntity
       type: DbColumnType.boolean,
       defaultValue: false
     }),
-    organization: null,
-    user: null,
-    calendarEvents: null
-  };
+    organization: 'organizationId',
+    user: 'userId',
+    calendarEvents: Object.freeze([])
+  });
 
-  public fromJson(json: Record<string, unknown>): Partial<ICalendarModel> {
-    const model = BaseEntity.fromJson<ICalendarModel>(json, this.tableName);
+  protected readonly _data?: unknown | null;
+  protected readonly _organization?: IOrganizationModel | null;
+  protected readonly _user: IUserModel | null = null;
+  protected readonly _calendarEvents: ICalendarEventModel[] = [];
 
-    return model;
+  public readonly title?: string;
+  public readonly description?: string | null;
+  public readonly userId?: string;
+  public readonly isPrivate?: boolean;
+  public readonly organizationId?: string;
+
+  public get data() {
+    return this._data;
   }
 
+  public get organization() {
+    return this._organization;
+  }
+
+  public get user() {
+    return this._user;
+  }
+
+  public get calendarEvents() {
+    return this._calendarEvents;
+  }
+
+  public readonly tableName = DbTableName.calendar;
+  public readonly schema = CalendarEntity.schema;
+
   public validateInsert() {
-    BaseEntity.validateInsert<ICalendarModel>(this);
+    validateColumnValues(this);
   }
 
   public validateUpdate(model: ICalendarModel) {
-    BaseEntity.validateUpdate<ICalendarModel>(this, model);
-  }
-
-  public toModel(): ICalendarModel {
-    return BaseEntity.toModel<ICalendarModel>(this);
-  }
-
-  public toJson(): string {
-    return BaseEntity.toJson<ICalendarModel>(this);
+    validateColumnValues(this, model);
   }
 
   public constructor(model: Partial<ICalendarModel>) {
     super(model);
 
-    this.data = model.data;
+    this._data = model.data;
     this.title = model.title;
     this.description = model.description;
   }

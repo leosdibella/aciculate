@@ -1,6 +1,6 @@
 import { IBaseModel } from './base-model';
 
-export interface IOrganizationCalendar extends IBaseModel {
+export interface IOrganizationCalendarModel extends IBaseModel {
   organizationId: string;
   calendarId: string;
 }

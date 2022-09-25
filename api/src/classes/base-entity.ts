@@ -1,14 +1,15 @@
-import { DbEntity } from '../types';
 import { DbColumnType } from '../enums';
 import { IBaseModel } from '../interfaces';
 import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
-import { validateColumnValues } from '../utilities';
+import { DbColumn, DbSchema } from '../types';
 import { ApiError } from '@shared/classes';
-import { DbTableName } from '@shared/enums';
+import { ApiErrorCode } from '@shared/enums';
 
-export abstract class BaseEntity implements Partial<IBaseModel> {
-  public static schema = {
+export abstract class BaseEntity<T extends IBaseModel>
+  implements Partial<IBaseModel>
+{
+  protected static readonly _schema = Object.freeze({
     id: Object.freeze({
       isPrimaryKey: true,
       type: DbColumnType.uuid,
@@ -26,32 +27,54 @@ export abstract class BaseEntity implements Partial<IBaseModel> {
       type: DbColumnType.timestamptz,
       defaultValue: 'now()'
     })
-  };
+  });
 
-  protected static _immutableColumns: Readonly<
+  public static _immutableColumns: Readonly<
     Extract<keyof IBaseModel, string>[]
   > = Object.freeze(['id', 'updatedDate', 'createdDate']);
 
-  public static validateInsert<T extends IBaseModel>(entity: DbEntity<T>) {
-    validateColumnValues(entity);
+  protected readonly _createdDate?: Date;
+  protected readonly _updatedDate?: Date;
+  public readonly id?: string;
+  public readonly deleted?: boolean;
+  public abstract readonly schema: DbSchema<T>;
+  public abstract readonly tableName: string;
+
+  public get createdDate() {
+    return this._createdDate ? new Date(this._createdDate) : undefined;
   }
 
-  public static validateUpdate<T extends IBaseModel>(
-    entity: DbEntity<T>,
-    model: T
-  ) {
-    validateColumnValues(entity, model);
+  public get updatedDate() {
+    return this._updatedDate ? new Date(this._updatedDate) : undefined;
   }
 
-  public static toModel<T extends IBaseModel>(entity: DbEntity<T>): T {
+  public toModel(): T {
     const errors: IApiError[] = [];
     const model: Partial<T> = {};
 
-    (Object.keys(entity.schema) as Extract<keyof T, string>[]).forEach((k) => {
-      if (entity[k] === undefined) {
-        errors.push();
+    (
+      Object.keys(this.schema) as Extract<keyof this & keyof T, string>[]
+    ).forEach((k) => {
+      const column = this.schema[k];
+
+      if (
+        typeof column === 'object' &&
+        !Array.isArray(column) &&
+        (column as DbColumn).isSecured
+      ) {
+        return;
+      }
+
+      if (this[k] === undefined) {
+        errors.push({
+          errorCode: ApiErrorCode.databseSchemaValidationError,
+          message: `${this.tableName} is missing value for property ${k}.`
+        });
       } else {
-        model[k] = entity[k] as unknown as T[Extract<keyof T, string>];
+        model[k] = this[k] as unknown as T[Extract<
+          keyof this & keyof T,
+          string
+        >];
       }
     });
 
@@ -62,52 +85,134 @@ export abstract class BaseEntity implements Partial<IBaseModel> {
     return model as T;
   }
 
-  public static toJson<T extends IBaseModel>(entity: DbEntity<T>): string {
-    return JSON.stringify(entity.toModel());
+  public toJson(): string {
+    return JSON.stringify(this.toModel());
   }
 
-  public static fromJson<T extends IBaseModel>(
-    json: Record<string, unknown>,
-    tableName: DbTableName
-  ): Partial<T> {
-    const model = {} as Partial<T>;
+  public fromJson(serialized: string): Partial<T> {
+    const apiErrors: IApiError[] = [];
+    let json: Record<string, unknown> = {};
 
-    if (typeof json !== 'object' || !json) {
-      // TODO
-      throw Error(
-        `Unable to convert JSON data into ${tableName}, JSON not of type object.`
-      );
+    try {
+      json = JSON.parse(serialized);
+
+      if (typeof json !== 'object' || !json || Array.isArray(json)) {
+        apiErrors.push({
+          errorCode: ApiErrorCode.databseSchemaValidationError,
+          message: `${
+            this.tableName
+          } must be an object, recevied ${typeof json}.`
+        });
+      }
+    } catch {
+      apiErrors.push({
+        errorCode: ApiErrorCode.databseSchemaValidationError,
+        message: `${this.tableName} must be an object, unable to parse json received.`
+      });
     }
 
-    if (typeof json.id === 'string') {
-      model.id = json.id;
+    if (apiErrors.length) {
+      throw new ApiError(apiErrors);
+    }
+
+    const model = {} as Partial<T>;
+
+    (Object.keys(this.schema) as Extract<keyof T, string>[])
+      .filter(
+        (k) =>
+          typeof this.schema[k] !== 'string' && !Array.isArray(this.schema[k])
+      )
+      .forEach((cn) => {
+        const column = this.schema[cn] as DbColumn;
+        const value = json[cn];
+
+        if (column.isSecured) {
+          return;
+        }
+
+        if (column.type === DbColumnType.smallint) {
+          if (
+            (typeof value === 'number' && (value | 0) === value) ||
+            (column.isNullable && value === null)
+          ) {
+            model[cn] = value as T[Extract<keyof T, string>];
+          } else if (value !== undefined) {
+            apiErrors.push({
+              errorCode: ApiErrorCode.databseSchemaValidationError,
+              message: `${this.tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
+            });
+          }
+        }
+
+        if (column.type === DbColumnType.boolean) {
+          if (
+            typeof value === 'boolean' ||
+            (column.isNullable && value === null)
+          ) {
+            model[cn] = value as T[Extract<keyof T, string>];
+          } else if (value !== undefined) {
+            apiErrors.push({
+              errorCode: ApiErrorCode.databseSchemaValidationError,
+              message: `${this.tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
+            });
+          }
+        }
+
+        if (
+          column.type === DbColumnType.uuid ||
+          column.type === DbColumnType.varchar
+        ) {
+          if (
+            typeof value === 'string' ||
+            (column.isNullable && value === null)
+          ) {
+            model[cn] = value as unknown as T[Extract<keyof T, string>];
+          } else if (value !== undefined) {
+            apiErrors.push({
+              errorCode: ApiErrorCode.databseSchemaValidationError,
+              message: `${this.tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
+            });
+          }
+        }
+
+        if (
+          column.type === DbColumnType.timestamptz ||
+          column.type === DbColumnType.date
+        ) {
+          if (
+            typeof value === 'string' ||
+            (column.isNullable && value === null)
+          ) {
+            const date = value === null ? null : new Date(value as string);
+
+            model[cn] = date as unknown as T[Extract<keyof T, string>];
+
+            if (value !== null && isNaN(date!.getTime())) {
+              apiErrors.push({
+                errorCode: ApiErrorCode.databseSchemaValidationError,
+                message: `${this.tableName} expects ${cn} to be a serialized date string, received: ${value}.`
+              });
+            }
+          } else if (value !== undefined) {
+            apiErrors.push({
+              errorCode: ApiErrorCode.databseSchemaValidationError,
+              message: `${this.tableName} expects ${cn} to be a serialized date string, received: ${value}.`
+            });
+          }
+        }
+      });
+
+    if (apiErrors.length) {
+      throw new ApiError(apiErrors);
     }
 
     return model;
   }
 
-  protected readonly _id?: string;
-  protected readonly _createdDate?: Date;
-  protected readonly _updatedDate?: Date;
-
-  public deleted?: boolean;
-
-  public get id() {
-    return this._id;
-  }
-
-  public get createdDate() {
-    return this._createdDate;
-  }
-
-  public get updatedDate() {
-    return this._updatedDate;
-  }
-
   public constructor(model: Partial<IBaseModel>) {
-    this._id = model.id;
-    this._createdDate = sanitizeDate(model.createdDate);
+    this.id = model.id;
     this.deleted = model.deleted;
+    this._createdDate = sanitizeDate(model.createdDate);
     this._updatedDate = sanitizeDate(model.updatedDate);
   }
 }

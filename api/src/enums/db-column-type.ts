@@ -4,5 +4,6 @@ export enum DbColumnType {
   varchar = 'varchar',
   json = 'json',
   uuid = 'uuid',
-  smallint = 'smallint'
+  smallint = 'smallint',
+  date = 'date'
 }

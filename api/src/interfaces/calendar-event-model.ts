@@ -10,7 +10,6 @@ export interface ICalendarEventModel extends IBaseModel {
   startTimeZone: string;
   endTime: number | null;
   endDate: Date | null;
-  endDateTime: Date | null;
   endTimeZone: string | null;
   numberOfOccurences: number | null;
   repeatOn: string | null;
@@ -18,4 +17,5 @@ export interface ICalendarEventModel extends IBaseModel {
   timeInterval: TimeInterval | null;
   timeIntervalDuration: number | null;
   isPrivate: boolean;
+  calendarId: string;
 }

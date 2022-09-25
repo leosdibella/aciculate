@@ -1,0 +1,29 @@
+import { DbEntity } from '../types';
+import { IRoleModel } from '../interfaces/role-model';
+import { BaseEntity } from './base-entity';
+import { Role } from '@shared/enums';
+import { DbTableName, DbColumnType } from '../enums';
+
+export class RoleEntity
+  extends BaseEntity<IRoleModel>
+  implements DbEntity<IRoleModel>
+{
+  public static readonly schema = Object.freeze({
+    ...BaseEntity._schema,
+    name: Object.freeze({
+      type: DbColumnType.varchar,
+      minLength: 1,
+      maxLength: 512
+    })
+  });
+
+  public readonly schema = RoleEntity.schema;
+  public readonly tableName = DbTableName.role;
+  public readonly name?: Role;
+
+  public constructor(model: Partial<IRoleModel>) {
+    super(model);
+
+    this.name = model.name;
+  }
+}

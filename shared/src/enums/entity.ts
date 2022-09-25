@@ -1,4 +1,4 @@
-export enum DbTableName {
+export enum Entity {
   user = 'user',
   calendar = 'calendar',
   organization = 'organization',

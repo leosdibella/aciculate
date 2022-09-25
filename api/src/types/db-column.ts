@@ -1,5 +1,4 @@
-import { DbTableName } from '@shared/enums';
-import { DbColumnType } from '../enums';
+import { DbTableName, DbColumnType } from '../enums';
 
 export type PrimaryKeyColumn = Readonly<{
   isPrimaryKey: true;
@@ -8,7 +7,10 @@ export type PrimaryKeyColumn = Readonly<{
   foreignKeyTable?: never;
   foreignKeyColumn?: never;
   cascadeOnDelete?: never;
+  maxLength?: never;
+  minLength?: never;
   isNullable?: never;
+  isSecured?: true;
 }>;
 
 export type ForeignKeyColumn = Readonly<{
@@ -16,9 +18,12 @@ export type ForeignKeyColumn = Readonly<{
   type: DbColumnType.uuid;
   foreignKeyTable: DbTableName;
   foreignKeyColumn: string;
-  cascadeOnDelete?: boolean;
+  cascadeOnDelete?: true;
   defaultValue?: never;
-  isNullable?: boolean;
+  isNullable?: true;
+  isSecured?: true;
+  maxLength?: never;
+  minLength?: never;
 }>;
 
 export type BooleanColumn = Readonly<{
@@ -28,7 +33,10 @@ export type BooleanColumn = Readonly<{
   foreignKeyTable?: never;
   foreignKeyColumn?: never;
   cascadeOnDelete?: never;
-  isNullable?: boolean;
+  isNullable?: true;
+  isSecured?: true;
+  maxLength?: never;
+  minLength?: never;
 }>;
 
 export type JsonColumn = Readonly<{
@@ -39,6 +47,22 @@ export type JsonColumn = Readonly<{
   foreignKeyTable?: never;
   foreignKeyColumn?: never;
   cascadeOnDelete?: never;
+  isSecured?: true;
+  maxLength?: never;
+  minLength?: never;
+}>;
+
+export type DateColumn = Readonly<{
+  isPrimaryKey?: never;
+  type: DbColumnType.date;
+  defaultValue?: string;
+  foreignKeyTable?: never;
+  foreignKeyColumn?: never;
+  cascadeOnDelete?: never;
+  isNullable?: true;
+  isSecured?: true;
+  maxLength?: never;
+  minLength?: never;
 }>;
 
 export type DateTimeColumn = Readonly<{
@@ -48,7 +72,10 @@ export type DateTimeColumn = Readonly<{
   foreignKeyTable?: never;
   foreignKeyColumn?: never;
   cascadeOnDelete?: never;
-  isNullable?: boolean;
+  isNullable?: true;
+  isSecured?: true;
+  maxLength?: never;
+  minLength?: never;
 }>;
 
 export type StringColumn = Readonly<{
@@ -56,11 +83,25 @@ export type StringColumn = Readonly<{
   type: DbColumnType.varchar;
   maxLength: number;
   minLength?: number;
-  isNullable?: boolean;
+  isNullable?: true;
   defaultValue?: string;
   foreignKeyTable?: never;
   foreignKeyColumn?: never;
   cascadeOnDelete?: never;
+  isSecured?: true;
+}>;
+
+export type SmallIntegerColumn = Readonly<{
+  isPrimaryKey?: never;
+  type: DbColumnType.smallint;
+  maxLength?: number;
+  minLength?: number;
+  isNullable?: true;
+  defaultValue?: number;
+  foreignKeyTable?: never;
+  foreignKeyColumn?: never;
+  cascadeOnDelete?: never;
+  isSecured?: true;
 }>;
 
 export type DbColumn =
@@ -69,4 +110,6 @@ export type DbColumn =
   | BooleanColumn
   | JsonColumn
   | DateTimeColumn
-  | StringColumn;
+  | StringColumn
+  | SmallIntegerColumn
+  | DateColumn;

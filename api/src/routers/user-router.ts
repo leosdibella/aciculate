@@ -5,9 +5,9 @@ import { DependencyInjectionToken } from '../enums';
 import { IDbContext } from '../interfaces';
 
 // eslint-disable-next-line new-cap
-const calendarRouter = Router();
+const userRouter = Router();
 
-calendarRouter.get('/:id', async (req, res) => {
+userRouter.get('/:id', async (req, res) => {
   const id = req.params.id;
 
   const context = registry.inject<IDbContext>(
@@ -19,4 +19,4 @@ calendarRouter.get('/:id', async (req, res) => {
   return res.send(model);
 });
 
-export { calendarRouter };
+export { userRouter };

@@ -1,13 +1,15 @@
 import { Pool } from 'pg';
 import format from 'pg-format';
-import { DbColumn, DbEntity, IDbEntityConstructor } from '../types';
+import { DbEntity, DbSchema, IDbEntityConstructor } from '../types';
 import { IBaseModel, IDbContext } from '../interfaces';
 import {
   generateTableColumnDefinitions,
-  getColumnNamesAndValues
+  getColumnNamesAndValues,
+  validateColumnValues
 } from '../utilities';
 import { ApiError } from '@shared/classes';
-import { ApiErrorCode, DbTableName } from '@shared/enums';
+import { ApiErrorCode } from '@shared/enums';
+import { DbTableName } from '../enums';
 
 export class DbContext implements IDbContext {
   #pool = new Pool();
@@ -35,7 +37,11 @@ export class DbContext implements IDbContext {
   }
 
   async insert<T extends IBaseModel>(entity: DbEntity<T>) {
-    entity.validateInsert();
+    if (entity.validateInsert) {
+      entity.validateInsert();
+    } else {
+      validateColumnValues(entity);
+    }
 
     const { columnNames, columnValues } = getColumnNamesAndValues(entity);
 
@@ -65,7 +71,12 @@ export class DbContext implements IDbContext {
   async update<T extends IBaseModel>(entity: DbEntity<T>) {
     const oldModel = await this.get(entity);
 
-    entity.validateUpdate(oldModel);
+    if (entity.validateUpdate) {
+      entity.validateUpdate(oldModel);
+    } else {
+      validateColumnValues(entity, oldModel);
+    }
+
     const { columnNames, columnValues } = getColumnNamesAndValues(entity);
 
     columnNames.push('updatedDate' as Extract<keyof T, string>);
@@ -123,16 +134,21 @@ export class DbContext implements IDbContext {
     return;
   }
 
-  async migrateSchema(tables: Record<DbTableName, Record<string, DbColumn>>) {
-    const tableNames = Object.keys(tables) as DbTableName[];
+  async migrateSchema<T extends IBaseModel>(
+    tableName: DbTableName,
+    schema: DbSchema<T>
+  ) {
+    const { columns, indexes } = generateTableColumnDefinitions(
+      tableName,
+      schema
+    );
 
-    for (let i = 0; i < tableNames.length; ++i) {
-      const schema = tables[tableNames[i]];
-      const columns = generateTableColumnDefinitions(tableNames[i], schema);
+    await this.#pool.query(
+      `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(',\n')})`
+    );
 
-      await this.#pool.query(
-        `CREATE TABLE IF NOT EXISTS ${tableNames[i]} (${columns.join(',\n')})`
-      );
+    for (let i = 0; i < indexes.length; ++i) {
+      await this.#pool.query(indexes[i]);
     }
 
     return;

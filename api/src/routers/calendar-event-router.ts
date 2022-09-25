@@ -1,6 +1,6 @@
 import { registry } from '@shared/utilities';
 import Router from 'express-promise-router';
-import { CalendarEntity } from 'src/classes';
+import { CalendarEntity } from '../classes';
 import { DependencyInjectionToken } from '../enums';
 import { IDbContext } from '../interfaces';
 

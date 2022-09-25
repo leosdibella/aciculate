@@ -1,6 +1,7 @@
 import { IBaseModel } from './base-model';
 
-export interface IOrganizationUserEntity extends IBaseModel {
+export interface IOrganizationUserRoleModel extends IBaseModel {
   organizationId: string;
   userId: string;
+  roleId: string;
 }

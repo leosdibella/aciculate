@@ -6,4 +6,4 @@ export * from './calendar-event-model';
 export * from './organization-calendar-model';
 export * from './organization-model';
 export * from './user-model';
-export * from './organization-user-model';
+export * from './organization-user-role-model';

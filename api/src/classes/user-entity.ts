@@ -1,24 +1,15 @@
-import { DbTableName } from '@shared/enums';
-import { DbColumnType } from 'src/enums';
-import { DbEntity } from 'src/types';
+import { DbTableName, DbColumnType } from '../enums';
+import { DbEntity } from '../types';
+import { validateColumnValues } from '../utilities';
 import { IUserModel } from '../interfaces';
 import { BaseEntity } from './base-entity';
 
-export class UserEntity extends BaseEntity implements DbEntity<IUserModel> {
-  public readonly tableName = DbTableName.calendar;
-
-  public readonly immutableColumns: Readonly<
-    Extract<keyof IUserModel, string>[]
-  > = BaseEntity._immutableColumns;
-
-  public firstName?: string;
-  public lastName?: string;
-  public email?: string;
-  public passwordHash?: string;
-  public passwordSalt?: string;
-
-  public readonly schema = {
-    ...BaseEntity.schema,
+export class UserEntity
+  extends BaseEntity<IUserModel>
+  implements DbEntity<IUserModel>
+{
+  public static readonly schema = {
+    ...BaseEntity._schema,
     firstName: Object.freeze({
       type: DbColumnType.varchar,
       minLength: 1,
@@ -32,42 +23,40 @@ export class UserEntity extends BaseEntity implements DbEntity<IUserModel> {
     email: Object.freeze({
       type: DbColumnType.varchar,
       minLength: 1,
-      maxLength: 1024
+      maxLength: 512
     }),
     passwordHash: Object.freeze({
       type: DbColumnType.varchar,
       minLength: 1,
-      maxLength: 1024
+      maxLength: 1024,
+      isSecured: true
     }),
     passwordSalt: Object.freeze({
       type: DbColumnType.varchar,
       minLength: 1,
-      maxLength: 1024
+      maxLength: 1024,
+      isSecured: true
     }),
-    organizations: null,
-    calendars: null
+    organizations: Object.freeze([]),
+    calendars: Object.freeze([])
   };
 
-  public fromJson(json: Record<string, unknown>): Partial<IUserModel> {
-    const model = BaseEntity.fromJson<IUserModel>(json, this.tableName);
+  public readonly tableName = DbTableName.user;
 
-    return model;
-  }
+  public firstName?: string;
+  public lastName?: string;
+  public email?: string;
+  public passwordHash?: string;
+  public passwordSalt?: string;
+
+  public readonly schema = UserEntity.schema;
 
   public validateInsert() {
-    BaseEntity.validateInsert<IUserModel>(this);
+    validateColumnValues(this);
   }
 
   public validateUpdate(model: IUserModel) {
-    BaseEntity.validateUpdate<IUserModel>(this, model);
-  }
-
-  public toModel(): IUserModel {
-    return BaseEntity.toModel<IUserModel>(this);
-  }
-
-  public toJson(): string {
-    return BaseEntity.toJson<IUserModel>(this);
+    validateColumnValues(this, model);
   }
 
   public constructor(model: Partial<IUserModel>) {

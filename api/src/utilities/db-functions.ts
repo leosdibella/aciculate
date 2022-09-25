@@ -1,9 +1,15 @@
 import { IBaseModel } from '../interfaces';
-import { DbColumn, DbEntity, StringColumn } from '../types';
-import { DbColumnType } from '../enums';
+import {
+  DbColumn,
+  DbEntity,
+  DbSchema,
+  SmallIntegerColumn,
+  StringColumn
+} from '../types';
+import { DbTableName, DbColumnType } from '../enums';
 import { isPositiveInteger } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
-import { ApiErrorCode, DbTableName } from '@shared/enums';
+import { ApiErrorCode } from '@shared/enums';
 import { ApiError } from '@shared/classes';
 
 function getSchemaValidationError<T extends IBaseModel>(
@@ -36,6 +42,33 @@ function getSchemaConfigurationError<T extends IBaseModel>(
   };
 }
 
+function validateIntegerColumnValue<T extends IBaseModel>(
+  tableName: DbTableName,
+  columnName: Extract<keyof T, string>,
+  column: SmallIntegerColumn,
+  fieldValue: number | undefined | null,
+  id?: string
+) {
+  const errorMessages: string[] = [];
+
+  if (typeof fieldValue !== 'number') {
+    errorMessages.push();
+  } else if (fieldValue !== (fieldValue | 0)) {
+    errorMessages.push('this field must be an integer value');
+  }
+
+  return errorMessages.map((errorMessage) =>
+    getSchemaValidationError(
+      tableName,
+      columnName,
+      `${fieldValue}`,
+      errorMessage,
+      ApiErrorCode.databseSchemaValidationError,
+      id
+    )
+  );
+}
+
 function validateStringColumnValue<T extends IBaseModel>(
   tableName: DbTableName,
   columnName: Extract<keyof T, string>,
@@ -43,7 +76,7 @@ function validateStringColumnValue<T extends IBaseModel>(
   fieldValue: string | undefined | null,
   id?: string
 ) {
-  const errors: IApiError[] = [];
+  const errorMessages: string[] = [];
 
   if (
     (!column.isNullable && (fieldValue === undefined || fieldValue === null)) ||
@@ -52,15 +85,8 @@ function validateStringColumnValue<T extends IBaseModel>(
       fieldValue !== null &&
       fieldValue.length < column.minLength)
   ) {
-    errors.push(
-      getSchemaValidationError(
-        tableName,
-        columnName,
-        fieldValue,
-        `this field must contain at least ${column.minLength ?? 0} characters`,
-        ApiErrorCode.databseSchemaValidationError,
-        id
-      )
+    errorMessages.push(
+      `this field must contain at least ${column.minLength ?? 0} characters`
     );
   }
 
@@ -70,19 +96,21 @@ function validateStringColumnValue<T extends IBaseModel>(
     fieldValue !== null &&
     fieldValue.length > column.maxLength
   ) {
-    errors.push(
-      getSchemaValidationError(
-        tableName,
-        columnName,
-        fieldValue,
-        `this field cannot exceed ${column.maxLength} characters`,
-        ApiErrorCode.databseSchemaValidationError,
-        id
-      )
+    errorMessages.push(
+      `this field cannot exceed ${column.maxLength} characters`
     );
   }
 
-  return errors;
+  return errorMessages.map((errorMessage) =>
+    getSchemaValidationError(
+      tableName,
+      columnName,
+      fieldValue,
+      errorMessage,
+      ApiErrorCode.databseSchemaValidationError,
+      id
+    )
+  );
 }
 
 export function validateColumnValues<T extends IBaseModel>(
@@ -166,28 +194,18 @@ export function validateColumnValues<T extends IBaseModel>(
   }
 
   (Object.keys(entity.schema) as Extract<keyof T, string>[])
-    .filter((k) => entity.immutableColumns.indexOf(k) === -1)
+    .filter(
+      (k) =>
+        entity.immutableColumns.indexOf(k) === -1 &&
+        typeof entity.schema[k] !== 'string' &&
+        !Array.isArray(entity.schema[k])
+    )
     .forEach((columnName) => {
       let columnErrors: IApiError[] | undefined;
-      const column = entity.schema[columnName];
+      const column = entity.schema[columnName] as Readonly<DbColumn>;
       const columnValue = entity[columnName];
 
-      if (!column) {
-        return;
-      }
-
-      if (column.type === DbColumnType.varchar) {
-        columnErrors = validateStringColumnValue(
-          entity.tableName,
-          columnName,
-          column,
-          columnValue as string | null | undefined,
-          model?.id
-        );
-      } else if (
-        !column.isNullable &&
-        (columnValue === null || columnValue === undefined)
-      ) {
+      if (!column.isNullable && columnValue === null) {
         errors.push(
           getSchemaValidationError(
             entity.tableName,
@@ -197,6 +215,37 @@ export function validateColumnValues<T extends IBaseModel>(
             ApiErrorCode.databseSchemaValidationError,
             entity.id
           )
+        );
+      } else if (
+        columnValue === undefined &&
+        !model &&
+        column.defaultValue !== undefined
+      ) {
+        errors.push(
+          getSchemaValidationError(
+            entity.tableName,
+            columnName,
+            null,
+            `the column ${columnName} requires a value on insert`,
+            ApiErrorCode.databseSchemaValidationError,
+            entity.id
+          )
+        );
+      } else if (column.type === DbColumnType.varchar) {
+        columnErrors = validateStringColumnValue(
+          entity.tableName,
+          columnName,
+          column,
+          columnValue as string | null | undefined,
+          model?.id
+        );
+      } else if (column.type === DbColumnType.smallint) {
+        columnErrors = validateIntegerColumnValue(
+          entity.tableName,
+          columnName,
+          column,
+          columnValue as number | null | undefined,
+          model?.id
         );
       }
 
@@ -261,49 +310,61 @@ function validateColumnConfiguration<T extends IBaseModel>(
 
 export function generateTableColumnDefinitions<T extends IBaseModel>(
   tableName: DbTableName,
-  schema: Record<keyof T, DbColumn>
-): string[] {
+  schema: DbSchema<T>
+) {
   const columns: string[] = [];
   const apiErrors: IApiError[] = [];
+  const indexes: string[] = [];
 
-  (Object.keys(schema) as Extract<keyof T, string>[]).forEach((columnName) => {
-    const column = schema[columnName];
+  (Object.keys(schema) as Extract<keyof T, string>[])
+    .filter((k) => typeof schema[k] !== 'string' && !Array.isArray(schema[k]))
+    .forEach((columnName) => {
+      const column = schema[columnName] as DbColumn;
 
-    const { typeModifierText, errors } = validateColumnConfiguration(
-      tableName,
-      columnName,
-      column
-    );
+      const { typeModifierText, errors } = validateColumnConfiguration(
+        tableName,
+        columnName,
+        column
+      );
 
-    errors.forEach((e) => apiErrors.push(e));
+      if (column.foreignKeyColumn) {
+        indexes.push(
+          `CREATE INDEX IF NOT EXISTS ${tableName}_${columnName}_index ON ${tableName} (${columnName});`
+        );
+      }
 
-    const typeText = `${column.type}${typeModifierText}`;
-    const primaryKeyText = column.isPrimaryKey ? ' PRIMARY KEY ' : '';
+      errors.forEach((e) => apiErrors.push(e));
 
-    const nullableText =
-      column.isNullable || primaryKeyText ? '' : ' NOT NULL ';
+      const typeText = `${column.type}${typeModifierText}`;
+      const primaryKeyText = column.isPrimaryKey ? ' PRIMARY KEY ' : '';
 
-    const defaultText =
-      column.defaultValue !== undefined
-        ? ` DEFAULT ${column.defaultValue} `
+      const nullableText =
+        column.isNullable || primaryKeyText ? '' : ' NOT NULL ';
+
+      const defaultText =
+        column.defaultValue !== undefined
+          ? ` DEFAULT ${column.defaultValue} `
+          : '';
+
+      const forgienKeyText = column.foreignKeyTable
+        ? ` REFERENCES ${column.foreignKeyTable}(${column.foreignKeyColumn}) `
         : '';
 
-    const forgienKeyText = column.foreignKeyTable
-      ? ` REFERENCES ${column.foreignKeyTable}(${column.foreignKeyColumn}) `
-      : '';
+      const casecadeText = column.cascadeOnDelete ? ' ON DELETE CASCADE ' : '';
 
-    const casecadeText = column.cascadeOnDelete ? ' ON DELETE CASCADE ' : '';
-
-    columns.push(
-      `${columnName} ${typeText}${primaryKeyText}${nullableText}${defaultText}${forgienKeyText}${casecadeText};`
-    );
-  });
+      columns.push(
+        `${columnName} ${typeText}${primaryKeyText}${nullableText}${defaultText}${forgienKeyText}${casecadeText};`
+      );
+    });
 
   if (apiErrors.length) {
     throw new ApiError(apiErrors);
   }
 
-  return columns;
+  return {
+    columns,
+    indexes
+  };
 }
 
 export function getColumnNamesAndValues<T extends IBaseModel>(
