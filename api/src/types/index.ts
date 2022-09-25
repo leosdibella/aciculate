@@ -3,3 +3,4 @@ export * from './db-entity';
 export * from './db-entity-constructor';
 export * from './db-schema';
 export * from './db-table';
+export * from './db-model';

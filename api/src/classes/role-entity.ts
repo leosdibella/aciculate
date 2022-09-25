@@ -3,6 +3,7 @@ import { IRoleModel } from '../interfaces/role-model';
 import { BaseEntity } from './base-entity';
 import { Role } from '@shared/enums';
 import { DbTableName, DbColumnType } from '../enums';
+import { IDbSeedData } from 'src/interfaces';
 
 export class RoleEntity
   extends BaseEntity<IRoleModel>
@@ -16,6 +17,13 @@ export class RoleEntity
       maxLength: 512
     })
   });
+
+  public static seed(): IDbSeedData<IRoleModel> {
+    return {
+      values: (Object.keys(Role) as Role[]).map((r) => ({ name: r })),
+      conditions: ['name']
+    };
+  }
 
   public readonly schema = RoleEntity.schema;
   public readonly tableName = DbTableName.role;

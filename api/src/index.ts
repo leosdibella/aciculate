@@ -3,17 +3,17 @@ import cors from 'cors';
 import { calendarRouter, calendarEventRouter, userRouter } from './routers';
 import { HttpVerb } from '@shared/enums';
 import { registry } from '@shared/utilities';
-import { IDbContext } from './interfaces';
+import { IDbContext, IDbSeedData } from './interfaces';
 import { CalendarEntity, CalendarEventEntity, DbContext } from './classes';
 import { DbTableName, DependencyInjectionToken } from './enums';
-import { DbSchema, DbTable } from './types';
+import { DbSchema, DbModel, IDbEntityConstructor } from './types';
 import { OrganizationEntity } from './classes/organization-entity';
 import { UserEntity } from './classes/user-entity';
 import { RoleEntity } from './classes/role-entity';
 
 const dbContext = new DbContext();
 
-const dbSchema: { [key in DbTableName]: DbSchema<DbTable<key>> } = {
+const dbSchema: { [key in DbTableName]: DbSchema<DbModel<key>> } = {
   [DbTableName.calendar]: CalendarEntity.schema,
   [DbTableName.calendarEvent]: CalendarEventEntity.schema,
   [DbTableName.organization]: OrganizationEntity.schema,
@@ -21,8 +21,24 @@ const dbSchema: { [key in DbTableName]: DbSchema<DbTable<key>> } = {
   [DbTableName.role]: RoleEntity.schema
 };
 
+const dbDataSeeders: Partial<{
+  [key in DbTableName]: {
+    seed(): IDbSeedData<DbModel<key>>;
+    entityConstructor: IDbEntityConstructor<DbModel<key>>;
+  };
+}> = {
+  [DbTableName.role]: {
+    seed: RoleEntity.seed,
+    entityConstructor: RoleEntity
+  }
+};
+
 (Object.keys(dbSchema) as DbTableName[]).forEach((t) => {
   dbContext.migrateSchema(t, dbSchema[t]);
+});
+
+(Object.keys(dbDataSeeders) as DbTableName[]).forEach((t) => {
+  dbContext.seed(t, dbDataSeeders[t]);
 });
 
 registry.provide<IDbContext>(DependencyInjectionToken.dbContext, dbContext);

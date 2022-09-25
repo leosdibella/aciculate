@@ -42,14 +42,21 @@ export class UserEntity
   };
 
   public readonly tableName = DbTableName.user;
+  public readonly schema = UserEntity.schema;
+
+  public readonly userImmutableColumns: Readonly<
+    Extract<keyof IUserModel, string>[]
+  > = Object.freeze([
+    ...BaseEntity.userImmutableColumns,
+    'passwordHash',
+    'passwordSalt'
+  ]);
 
   public firstName?: string;
   public lastName?: string;
   public email?: string;
   public passwordHash?: string;
   public passwordSalt?: string;
-
-  public readonly schema = UserEntity.schema;
 
   public validateInsert() {
     validateColumnValues(this);

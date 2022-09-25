@@ -1,4 +1,4 @@
-import { DbColumnType } from '../enums';
+import { DbColumnType, DbTableName } from '../enums';
 import { IBaseModel } from '../interfaces';
 import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
@@ -26,12 +26,28 @@ export abstract class BaseEntity<T extends IBaseModel>
     createdDate: Object.freeze({
       type: DbColumnType.timestamptz,
       defaultValue: 'now()'
+    }),
+    updatedBy: Object.freeze({
+      type: DbColumnType.uuid,
+      foreignKeyTable: DbTableName.user,
+      foreignKeyColumn: 'id'
+    }),
+    createdBy: Object.freeze({
+      type: DbColumnType.uuid,
+      foreignKeyTable: DbTableName.user,
+      foreignKeyColumn: 'id'
     })
   });
 
-  public static _immutableColumns: Readonly<
+  public static userImmutableColumns: Readonly<
     Extract<keyof IBaseModel, string>[]
-  > = Object.freeze(['id', 'updatedDate', 'createdDate']);
+  > = Object.freeze([
+    'id',
+    'updatedDate',
+    'createdDate',
+    'createdBy',
+    'updatedBy'
+  ]);
 
   protected readonly _createdDate?: Date;
   protected readonly _updatedDate?: Date;

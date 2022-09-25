@@ -103,10 +103,6 @@ export class CalendarEventEntity
   public readonly tableName = DbTableName.calendar;
   public readonly schema = CalendarEventEntity.schema;
 
-  public readonly immutableColumns: Readonly<
-    Extract<keyof ICalendarEventModel, string>[]
-  > = BaseEntity._immutableColumns;
-
   protected readonly _startDate?: Date;
   protected readonly _endDate?: Date | null;
 

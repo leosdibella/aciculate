@@ -26,11 +26,6 @@ export class OrganizationEntity
 
   public readonly schema = OrganizationEntity.schema;
   public readonly tableName = DbTableName.organization;
-
-  public readonly immutableColumns: Readonly<
-    Extract<keyof IOrganizationModel, string>[]
-  > = BaseEntity._immutableColumns;
-
   public readonly name?: string;
   public readonly description?: string | null;
 

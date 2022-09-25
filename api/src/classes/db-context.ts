@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import format from 'pg-format';
-import { DbEntity, DbSchema, IDbEntityConstructor } from '../types';
-import { IBaseModel, IDbContext } from '../interfaces';
+import { DbEntity, DbSchema, DbTable, IDbEntityConstructor } from '../types';
+import { IBaseModel, IDbContext, IDbSeedData } from '../interfaces';
 import {
   generateTableColumnDefinitions,
   getColumnNamesAndValues,
@@ -9,14 +9,13 @@ import {
 } from '../utilities';
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode } from '@shared/enums';
-import { DbTableName } from '../enums';
 
 export class DbContext implements IDbContext {
   #pool = new Pool();
 
   async get<T extends IBaseModel>(entity: DbEntity<T>) {
     const query = format(
-      `SELECT * FROM ${entity.tableName} WHERE id = %L`,
+      `SELECT * FROM ${entity.tableName} WHERE id = %L;`,
       entity.id
     );
 
@@ -46,7 +45,7 @@ export class DbContext implements IDbContext {
     const { columnNames, columnValues } = getColumnNamesAndValues(entity);
 
     const query = format(
-      `INSERT INTO ${entity.tableName} (${columnNames.join()}) VALUES %L`,
+      `INSERT INTO ${entity.tableName} (${columnNames.join()}) VALUES %L;`,
       columnValues
     );
 
@@ -87,7 +86,7 @@ export class DbContext implements IDbContext {
       .join();
 
     const query = format(
-      `UPDATE ${entity.tableName} SET %s WHERE id = %L`,
+      `UPDATE ${entity.tableName} SET %s WHERE id = %L;`,
       setters,
       entity.id
     );
@@ -116,7 +115,7 @@ export class DbContext implements IDbContext {
 
   async hardDelete<T extends IBaseModel>(entity: DbEntity<T>) {
     const query = format(
-      `DELETE FROM ${entity.tableName} WHERE id = %L`,
+      `DELETE FROM ${entity.tableName} WHERE id = %L;`,
       entity.id
     );
 
@@ -135,7 +134,7 @@ export class DbContext implements IDbContext {
   }
 
   async migrateSchema<T extends IBaseModel>(
-    tableName: DbTableName,
+    tableName: DbTable<T>,
     schema: DbSchema<T>
   ) {
     const { columns, indexes } = generateTableColumnDefinitions(
@@ -144,11 +143,37 @@ export class DbContext implements IDbContext {
     );
 
     await this.#pool.query(
-      `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(',\n')})`
+      `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(',\n')});`
     );
 
     for (let i = 0; i < indexes.length; ++i) {
       await this.#pool.query(indexes[i]);
+    }
+
+    return;
+  }
+
+  async seed<T extends IBaseModel>(
+    tableName: DbTable<T>,
+    dataFactory: () => IDbSeedData<T>,
+    entityConstructor: IDbEntityConstructor<T>
+  ) {
+    const seedData = dataFactory();
+
+    for (let i = 0; i < seedData.conditions.length; ++i) {
+      const conditions = seedData.conditions
+        .map((c, j) => format('%s = %L', c, seedData.values[j][c]))
+        .join(' AND ');
+
+      const query = format(`SELECT * FROM ${tableName} WHERE %s;`, conditions);
+      const result = await this.#pool.query(query);
+
+      if (result.rows.length > 0) {
+        continue;
+      }
+
+      // eslint-disable-next-line new-cap
+      this.insert(new entityConstructor(seedData.values[i]));
     }
 
     return;

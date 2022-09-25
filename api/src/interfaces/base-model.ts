@@ -3,4 +3,6 @@ export interface IBaseModel {
   createdDate: Date;
   updatedDate: Date;
   deleted: boolean;
+  createdBy: string;
+  updatedBy: string;
 }

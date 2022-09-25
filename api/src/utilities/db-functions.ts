@@ -11,6 +11,7 @@ import { isPositiveInteger } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
 import { ApiErrorCode } from '@shared/enums';
 import { ApiError } from '@shared/classes';
+import { BaseEntity } from 'src/classes';
 
 function getSchemaValidationError<T extends IBaseModel>(
   tableName: DbTableName,
@@ -196,7 +197,10 @@ export function validateColumnValues<T extends IBaseModel>(
   (Object.keys(entity.schema) as Extract<keyof T, string>[])
     .filter(
       (k) =>
-        entity.immutableColumns.indexOf(k) === -1 &&
+        (
+          entity.userImmutableColumns ??
+          (BaseEntity.userImmutableColumns as Extract<keyof T, string>[])
+        ).indexOf(k) === -1 &&
         typeof entity.schema[k] !== 'string' &&
         !Array.isArray(entity.schema[k])
     )
@@ -374,7 +378,13 @@ export function getColumnNamesAndValues<T extends IBaseModel>(
   const columnValues: unknown[] = [];
 
   (Object.keys(entity.schema) as Extract<keyof T, string>[])
-    .filter((columnName) => entity.immutableColumns.indexOf(columnName) === -1)
+    .filter(
+      (columnName) =>
+        (
+          entity.userImmutableColumns ??
+          (BaseEntity.userImmutableColumns as Extract<keyof T, string>[])
+        ).indexOf(columnName) === -1
+    )
     .forEach((columnName) => {
       const value = entity[columnName];
 
