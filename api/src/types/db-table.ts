@@ -1,12 +1,14 @@
-import { IRoleModel } from 'src/interfaces/role-model';
-import { DbTableName } from '../enums';
+import { DbTableName } from '@enums';
 import {
   IBaseModel,
   ICalendarEventModel,
   ICalendarModel,
   IOrganizationModel,
-  IUserModel
-} from '../interfaces';
+  IUserModel,
+  IRoleModel,
+  IOrganizationCalendarModel,
+  IOrganizationUserRoleModel
+} from '@interfaces';
 
 export type DbTable<T extends IBaseModel> = T extends IUserModel
   ? DbTableName.user
@@ -18,4 +20,8 @@ export type DbTable<T extends IBaseModel> = T extends IUserModel
   ? DbTableName.calendar
   : T extends ICalendarEventModel
   ? DbTableName.calendarEvent
+  : T extends IOrganizationCalendarModel
+  ? DbTableName.organizationCalendar
+  : T extends IOrganizationUserRoleModel
+  ? DbTableName.organizationUserRole
   : never;

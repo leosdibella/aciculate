@@ -1,8 +1,8 @@
 import { registry } from '@shared/utilities';
 import Router from 'express-promise-router';
-import { CalendarEntity } from '../classes';
-import { DependencyInjectionToken } from '../enums';
-import { IDbContext } from '../interfaces';
+import { CalendarEntity } from '@classes';
+import { DependencyInjectionToken } from '@enums';
+import { IDbContext } from '@interfaces';
 
 // eslint-disable-next-line new-cap
 const calendarEventRouter = Router();

@@ -1,4 +1,4 @@
-import { DbTableName, DbColumnType } from '../enums';
+import { DbTableName, DbColumnType } from '@enums';
 
 export type PrimaryKeyColumn = Readonly<{
   isPrimaryKey: true;

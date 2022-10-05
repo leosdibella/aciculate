@@ -1,6 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 import { randomBytes, pbkdf2 } from 'crypto';
-import { IJwtPayload } from 'src/interfaces/jwt-payload';
+import { IUserContext } from '@interfaces';
 import {
   hoursPerDay,
   minutesPerHour,
@@ -8,7 +8,7 @@ import {
 } from '@shared/utilities';
 import { ApiErrorCode, HttpStatusCode, Role } from '@shared/enums';
 import { Request, Response, NextFunction } from 'express';
-import { RoleEntity } from 'src/classes/role-entity';
+import { RoleEntity } from '@classes';
 import { ApiError } from '@shared/classes';
 
 const saltByteLength = 64;
@@ -24,8 +24,8 @@ const jwtOptions: jwt.SignOptions = {
   expiresIn: tokenDurationSeconds
 };
 
-export function generateToken(payload: IJwtPayload, secret: string) {
-  return jwt.sign(payload, secret, jwtOptions);
+export function generateToken(userContext: IUserContext, secret: string) {
+  return jwt.sign(userContext, secret, jwtOptions);
 }
 
 export function generateSalt() {
@@ -33,26 +33,22 @@ export function generateSalt() {
 }
 
 async function verifyJwt(token: string) {
-  return new Promise<IJwtPayload>((resolve, reject) => {
+  return new Promise<IUserContext>((resolve, reject) => {
     jwt.verify(
       token,
       process.env.TOKEN_SECRET as string,
-      (err: jwt.VerifyErrors, payload: IJwtPayload) => {
+      (err: jwt.VerifyErrors, userContext: IUserContext) => {
         if (err) {
           reject(err);
         } else {
-          resolve(payload);
+          resolve(userContext);
         }
       }
     );
   });
 }
 
-export function authenticateToken(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export function authenticate(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -60,8 +56,8 @@ export function authenticateToken(
   }
 
   verifyJwt(token)
-    .then((payload) => {
-      res.locals.jwtPayload = payload;
+    .then((userContext) => {
+      res.locals.userContext = userContext;
       next();
     })
     .catch(() => {
@@ -70,8 +66,8 @@ export function authenticateToken(
     });
 }
 
-export function authenticateTokenWithRole(role: Role) {
-  return function authenticateTokenWithRoleHandler(
+export function authorize(roles: Role[]) {
+  return function authorizeHandler(
     req: Request,
     res: Response,
     next: NextFunction
@@ -83,19 +79,19 @@ export function authenticateTokenWithRole(role: Role) {
     }
 
     verifyJwt(token)
-      .then((payload) => {
-        const roleId = RoleEntity.values.find((r) => r.name === role)?.id;
+      .then((userContext) => {
+        const role = RoleEntity.values.find((r) => r.id === userContext.roleId);
 
-        if (!roleId || payload.roleId !== roleId) {
+        if (!role || roles.indexOf(role.name!) === -1) {
           throw new ApiError([
             {
               errorCode: ApiErrorCode.insufficientPermissionsError,
-              message: `Role of ${role} is required to perform this operation.`
+              message: `A role belonging to the set [${roles.join()}] is required to perform this operation.`
             }
           ]);
         }
 
-        res.locals.jwtPayload = payload;
+        res.locals.userContext = userContext;
         next();
       })
       .catch(() => {
@@ -115,7 +111,7 @@ export async function generateHash(password: string, salt: string) {
       digest,
       (error: Error, derivedKey: Buffer) => {
         if (error) {
-          reject(Error);
+          reject(error);
         } else {
           resolve(derivedKey.toString(bufferEncodiing));
         }
