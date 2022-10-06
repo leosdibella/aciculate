@@ -6,5 +6,7 @@ export enum ApiErrorCode {
   datbaseSchemaConfigurationError,
   databseSchemaValidationError,
   databaseOptimisticConcurencyError,
-  insufficientPermissionsError
+  insufficientPermissionsError,
+  invalidToken,
+  duplicateRouteDefintion
 }

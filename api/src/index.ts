@@ -3,7 +3,6 @@ import cors from 'cors';
 import {
   calendarRouter,
   calendarEventRouter,
-  userRouter,
   organizationRouter
 } from '@routers';
 import { HttpVerb } from '@shared/enums';
@@ -13,11 +12,10 @@ import {
   IDbContextConstructor,
   IUserServiceConstructor
 } from '@interfaces';
-import { DbContext, UserController, UserService } from '@classes';
+import { DbContext, UserService } from '@classes';
 import { DependencyInjectionToken } from '@enums';
 import { Entity } from '@shared/enums/entity';
 import { exit } from 'process';
-import { bindRoutes } from './utilities/bind-routes';
 
 const dbContext: IDbContext = new DbContext();
 
@@ -47,11 +45,13 @@ function startApi() {
 
   app.use(express.json());
 
-  bindRoutes(UserController, app);
+  registry.provide<express.Express>(
+    DependencyInjectionToken.expressApplication,
+    app
+  );
 
   app.use(`/${Entity.calendar}`, calendarRouter);
   app.use(`/${Entity.calendarEvent}`, calendarEventRouter);
-  app.use(`/${Entity.user}`, userRouter());
   app.use(`/${Entity.organization}`, organizationRouter());
 
   app.listen(port, () => {

@@ -6,10 +6,7 @@ import {
   minutesPerHour,
   secondsPerMinute
 } from '@shared/utilities';
-import { ApiErrorCode, HttpStatusCode, Role } from '@shared/enums';
 import { Request, Response, NextFunction } from 'express';
-import { RoleEntity } from '@classes';
-import { ApiError } from '@shared/classes';
 
 const saltByteLength = 64;
 const jwtAlgorithm = 'HS512';
@@ -32,73 +29,30 @@ export function generateSalt() {
   return randomBytes(saltByteLength).toString(bufferEncodiing);
 }
 
-async function verifyJwt(token: string) {
-  return new Promise<IUserContext>((resolve, reject) => {
+export function decodeJwt(
+  request: Request,
+  response: Response,
+  next: NextFunction
+) {
+  const token = request.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    next();
+  } else {
     jwt.verify(
       token,
       process.env.TOKEN_SECRET as string,
       (err: jwt.VerifyErrors, userContext: IUserContext) => {
         if (err) {
-          reject(err);
+          response.locals.userContext = null;
         } else {
-          resolve(userContext);
+          response.locals.userContext = userContext;
         }
+
+        next();
       }
     );
-  });
-}
-
-export function authenticate(req: Request, res: Response, next: NextFunction) {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.sendStatus(HttpStatusCode.unauthorized);
   }
-
-  verifyJwt(token)
-    .then((userContext) => {
-      res.locals.userContext = userContext;
-      next();
-    })
-    .catch(() => {
-      res.sendStatus(HttpStatusCode.forbidden);
-      next();
-    });
-}
-
-export function authorize(roles: Role[]) {
-  return function authorizeHandler(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) {
-    const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-      return res.sendStatus(HttpStatusCode.unauthorized);
-    }
-
-    verifyJwt(token)
-      .then((userContext) => {
-        const role = RoleEntity.values.find((r) => r.id === userContext.roleId);
-
-        if (!role || roles.indexOf(role.name!) === -1) {
-          throw new ApiError([
-            {
-              errorCode: ApiErrorCode.insufficientPermissionsError,
-              message: `A role belonging to the set [${roles.join()}] is required to perform this operation.`
-            }
-          ]);
-        }
-
-        res.locals.userContext = userContext;
-        next();
-      })
-      .catch(() => {
-        res.sendStatus(HttpStatusCode.forbidden);
-        next();
-      });
-  };
 }
 
 export async function generateHash(password: string, salt: string) {
