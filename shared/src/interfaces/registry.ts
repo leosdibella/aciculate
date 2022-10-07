@@ -1,7 +1,7 @@
 import { IRegistryValue } from './registry-value';
 
 export interface IRegistry<
-  T extends string = string,
+  T extends symbol = symbol,
   S extends Partial<Record<T, unknown>> = Partial<Record<T, unknown>>
 > {
   inject<U extends S[T]>(key: T): U | undefined;
@@ -16,4 +16,8 @@ export interface IRegistry<
   provideMany<U extends Partial<Record<T, IRegistryValue>>>(
     provisions: U
   ): void;
+  create<U extends S[T]>(
+    key: T,
+    runtimeDependencies?: Readonly<Record<symbol, IRegistryValue>>
+  ): U;
 }

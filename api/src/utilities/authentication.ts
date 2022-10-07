@@ -6,7 +6,6 @@ import {
   minutesPerHour,
   secondsPerMinute
 } from '@shared/utilities';
-import { Request, Response, NextFunction } from 'express';
 
 const saltByteLength = 64;
 const jwtAlgorithm = 'HS512';
@@ -29,30 +28,24 @@ export function generateSalt() {
   return randomBytes(saltByteLength).toString(bufferEncodiing);
 }
 
-export function decodeJwt(
-  request: Request,
-  response: Response,
-  next: NextFunction
-) {
-  const token = request.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    next();
-  } else {
-    jwt.verify(
-      token,
-      process.env.TOKEN_SECRET as string,
-      (err: jwt.VerifyErrors, userContext: IUserContext) => {
-        if (err) {
-          response.locals.userContext = null;
-        } else {
-          response.locals.userContext = userContext;
+export async function decodeJwt(token?: string): Promise<IUserContext> {
+  return new Promise((resolve, reject) => {
+    if (!token) {
+      reject();
+    } else {
+      jwt.verify(
+        token,
+        process.env.TOKEN_SECRET as string,
+        (err: jwt.VerifyErrors, userContext: IUserContext) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(userContext);
+          }
         }
-
-        next();
-      }
-    );
-  }
+      );
+    }
+  });
 }
 
 export async function generateHash(password: string, salt: string) {

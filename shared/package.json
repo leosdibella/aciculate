@@ -10,9 +10,6 @@
       "type-check-all-diagnostics": "tsc --noEmit --extendedDiagnostics"
     },
     "author": "Leonardo DiBella",
-    "license": "MIT",
-    "devDependencies": {
-      "typescript": "^4.7.4"
-    }
+    "license": "MIT"
   }
   

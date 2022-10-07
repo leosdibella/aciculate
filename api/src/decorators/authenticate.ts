@@ -2,12 +2,8 @@ import { RoleEntity } from '@classes/entities';
 import { IController } from '@interfaces/controllers';
 import { ApiErrorCode, HttpStatusCode, Role } from '@shared/enums';
 
-export function authenticate(roles?: Role[]) {
-  return function authenticateDecorator(
-    target: IController,
-    key: string | symbol,
-    descriptor: PropertyDescriptor
-  ) {
+export function authenticate(roles?: Role[]): MethodDecorator {
+  return function authenticateDecorator(target: IController) {
     if (!target.userContext) {
       target.response
         .status(

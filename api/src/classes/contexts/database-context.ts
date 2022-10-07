@@ -27,6 +27,8 @@ import {
   RoleEntity,
   UserEntity
 } from '@classes/entities';
+import { inject } from '@shared/decorators';
+import { dependencyInjectionTokens } from 'src/data';
 
 export class DbContext implements IDbContext {
   static readonly #dbPool = new Pool();
@@ -59,7 +61,6 @@ export class DbContext implements IDbContext {
   ]);
 
   readonly #pool = DbContext.#dbPool;
-  readonly #userContext?: IUserContext;
 
   public async get<T extends IBaseModel>(entity: DbEntity<T>) {
     const query = format(
@@ -92,11 +93,11 @@ export class DbContext implements IDbContext {
 
     const { columnNames, columnValues } = getColumnNamesAndValues(entity);
 
-    if (this.#userContext) {
+    if (this._userContext) {
       columnNames.push('createdBy' as Extract<keyof T, string>);
       columnNames.push('updatedBy' as Extract<keyof T, string>);
-      columnValues.push(this.#userContext.userId);
-      columnValues.push(this.#userContext.userId);
+      columnValues.push(this._userContext.userId);
+      columnValues.push(this._userContext.userId);
     }
 
     const query = format(
@@ -136,7 +137,7 @@ export class DbContext implements IDbContext {
     columnNames.push('updatedDate' as Extract<keyof T, string>);
     columnValues.push(new Date());
     columnNames.push('updatedBy' as Extract<keyof T, string>);
-    columnValues.push(this.#userContext?.userId ?? null);
+    columnValues.push(this._userContext?.userId ?? null);
 
     const setters = columnNames
       .map((cn, i) => format('%s = %L', cn, columnValues[i]))
@@ -303,7 +304,8 @@ export class DbContext implements IDbContext {
     }
   }
 
-  public constructor(userContext?: IUserContext) {
-    this.#userContext = userContext;
-  }
+  public constructor(
+    @inject(dependencyInjectionTokens.userContext)
+    private readonly _userContext: IUserContext | null | undefined
+  ) {}
 }

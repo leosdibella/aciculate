@@ -4,3 +4,4 @@ export * from './calendar-event';
 export * from './api-error';
 export * from './registry-value';
 export * from './registry';
+export * from './injection';

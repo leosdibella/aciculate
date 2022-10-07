@@ -1,4 +1,4 @@
-import { IDbContext } from './db-context';
+import { IDbContext } from './database-context';
 import { IUserContext } from './user-context';
 
 export interface IDbContextConstructor {

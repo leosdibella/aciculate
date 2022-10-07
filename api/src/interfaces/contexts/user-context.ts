@@ -1,5 +1,5 @@
 export interface IUserContext {
-  userId: string;
-  roleId: string;
-  organizationId: string;
+  readonly userId: string;
+  readonly roleId: string;
+  readonly organizationId: string;
 }

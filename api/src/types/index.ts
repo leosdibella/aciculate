@@ -3,5 +3,4 @@ export * from './db-entity';
 export * from './db-schema';
 export * from './db-table';
 export * from './db-model';
-export * from './controller-routes';
 export * from './controller-constructor';

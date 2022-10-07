@@ -1,7 +1,5 @@
 import { IController } from '@interfaces';
-import { Request, Response } from 'express';
+import { Constructor } from '@shared/types';
 
-export type ControllerConstructor<T extends IController> = new (
-  request: Request,
-  response: Response
-) => T;
+export type ControllerConstructor<T extends IController = IController> =
+  Constructor<T>;

@@ -22,7 +22,7 @@
   },
   "include": [
     "**/*.ts"
-, "../api/src/enums/db-table-name.ts"  ],
+  ],
   "exclude": [
     "./node_modules",
   ]
