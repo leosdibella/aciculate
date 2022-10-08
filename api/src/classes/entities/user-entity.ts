@@ -3,7 +3,9 @@ import { DbEntity } from '@types';
 import { generateHash, generateSalt, validateColumnValues } from '@utilities';
 import { IDbSeedData, IUserModel } from '@interfaces';
 import { BaseEntity } from './base-entity';
+import { entity } from '@decorators';
 
+@entity()
 export class UserEntity
   extends BaseEntity<IUserModel>
   implements DbEntity<IUserModel>

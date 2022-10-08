@@ -6,6 +6,7 @@ const organizationService = Symbol('organizationService');
 const databaseContext = Symbol('databaseContext');
 const applicationContext = Symbol('applicationContext');
 const userContext = Symbol('userContext');
+const httpControllerDefinitions = Symbol('httpControllerDefinitions');
 
 export const dependencyInjectionTokens = Object.freeze({
   httpRequest,
@@ -15,5 +16,6 @@ export const dependencyInjectionTokens = Object.freeze({
   userController,
   userContext,
   databaseContext,
-  applicationContext
+  applicationContext,
+  httpControllerDefinitions
 });

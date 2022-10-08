@@ -15,11 +15,13 @@ import { dependencyInjectionTokens } from '@data';
 
 @httpController(dependencyInjectionTokens.userController)
 export class UserController implements IUserController {
+  readonly #userService: IUserService;
+
   @authenticate()
   @route(HttpVerb.get, '/:id')
   public async get(@routeParameter('id') id: string) {
     try {
-      const user = await this._userService.get(id);
+      const user = await this.#userService.get(id);
 
       this.response.send(user);
     } catch {
@@ -28,9 +30,10 @@ export class UserController implements IUserController {
   }
 
   @route(HttpVerb.post, '/create')
+  // TODO: Add validator
   public async create(@requestBody() createUserRequest: ICreateUserRequest) {
     try {
-      const user = await this._userService.create(createUserRequest);
+      const user = await this.#userService.create(createUserRequest);
 
       this.response.send(user);
     } catch {
@@ -46,6 +49,8 @@ export class UserController implements IUserController {
     @inject(dependencyInjectionTokens.userContext)
     public readonly userContext: Readonly<IUserContext> | undefined | null,
     @inject(dependencyInjectionTokens.userService)
-    private readonly _userService: IUserService
-  ) {}
+    userService: IUserService
+  ) {
+    this.#userService = userService;
+  }
 }

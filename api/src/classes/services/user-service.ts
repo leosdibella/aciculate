@@ -10,8 +10,10 @@ import { inject } from '@shared/decorators';
 import { dependencyInjectionTokens } from 'src/data';
 
 export class UserService implements IUserService {
+  readonly #databaseContext: IDbContext;
+
   public async get(id: string) {
-    return this._databaseContext.get(new UserEntity({ id }));
+    return this.#databaseContext.get(new UserEntity({ id }));
   }
 
   public async create(request: ICreateUserRequest) {
@@ -26,9 +28,9 @@ export class UserService implements IUserService {
     };
 
     // TODO: Query before inserting
-    const user = await this._databaseContext.insert(new UserEntity(userModel));
+    const user = await this.#databaseContext.insert(new UserEntity(userModel));
 
-    await this._databaseContext.insert(
+    await this.#databaseContext.insert(
       new OrganizationUserRoleEntity({
         organizationId: request.organizationId,
         roleId: request.roleId,
@@ -41,6 +43,8 @@ export class UserService implements IUserService {
 
   public constructor(
     @inject(dependencyInjectionTokens.databaseContext)
-    private readonly _databaseContext: IDbContext
-  ) {}
+    databaseContext: IDbContext
+  ) {
+    this.#databaseContext = databaseContext;
+  }
 }

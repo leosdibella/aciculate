@@ -5,6 +5,7 @@ import { IApiError } from '@shared/interfaces';
 import { DbColumn, DbSchema } from '@types';
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode } from '@shared/enums';
+import { field } from '@decorators/database';
 
 export abstract class BaseEntity<T extends IBaseModel>
   implements Partial<IBaseModel>
@@ -56,6 +57,7 @@ export abstract class BaseEntity<T extends IBaseModel>
   public abstract readonly schema: DbSchema<T>;
   public abstract readonly tableName: string;
 
+  @field()
   public readonly id?: string;
   public readonly deleted?: boolean;
   public readonly createdBy?: string;

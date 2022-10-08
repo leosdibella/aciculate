@@ -1,27 +1,20 @@
-import { DbContext } from '@classes/contexts';
-import { DependencyInjectionToken } from '@enums/dependency-injection-tokens';
-import {
-  IDbContext,
-  IDbContextConstructor,
-  IUserContext
-} from '@interfaces/contexts';
+import { dependencyInjectionTokens } from '@data';
+import { IDbContext } from '@interfaces/contexts';
 import { IOrganizationService } from '@interfaces/services';
-import { registry } from '@shared/utilities';
-import { OrganizationEntity } from '..';
+import { inject } from '@shared/decorators';
+import { OrganizationEntity } from '@classes/entities';
 
 export class OrganizationService implements IOrganizationService {
-  readonly #dbContext: IDbContext;
+  readonly #databaseContext: IDbContext;
 
   public async get(id: string) {
-    return this.#dbContext.get(new OrganizationEntity({ id }));
+    return this.#databaseContext.get(new OrganizationEntity({ id }));
   }
 
-  public constructor(userContext: IUserContext) {
-    const DbContextConstructor = registry.inject<IDbContextConstructor>(
-      DependencyInjectionToken.dbContextConstructor,
-      DbContext
-    )!;
-
-    this.#dbContext = new DbContextConstructor(userContext);
+  public constructor(
+    @inject(dependencyInjectionTokens.databaseContext)
+    databaseContext: IDbContext
+  ) {
+    this.#databaseContext = databaseContext;
   }
 }

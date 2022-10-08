@@ -1,52 +1,21 @@
 import {
   IController,
   IControllerRoute,
-  IApplicationContext
+  IApplicationContext,
+  IDbContext
 } from '@interfaces';
 import { ControllerConstructor } from '@types';
 import Router from 'express-promise-router';
 import express from 'express';
 import cors from 'cors';
 import { HttpVerb } from '@shared/enums';
-import { DbContext } from './database-context';
-import { registry } from '@shared/utilities';
-import { IRegistryValue } from '@shared/interfaces';
-import { UserController } from '../controllers';
-import { OrganizationService, UserService } from '../services';
-import { dependencyInjectionTokens, httpRoutingMetadataKeys } from '@data';
+import { dependencyInjectionTokens, httpMetadataKeys } from '@data';
+import { inject } from '@shared/decorators';
 
 export class ApplicationContext implements IApplicationContext {
-  static readonly #dependencies: Readonly<
-    Partial<Record<symbol, Readonly<IRegistryValue>>>
-  > = Object.freeze({
-    [dependencyInjectionTokens.databaseContext]: Object.freeze({
-      value: DbContext
-    }),
-    [dependencyInjectionTokens.userService]: Object.freeze({
-      value: UserService
-    }),
-    [dependencyInjectionTokens.userController]: Object.freeze({
-      value: UserController
-    }),
-    [dependencyInjectionTokens.organizationService]: Object.freeze({
-      value: OrganizationService
-    })
-  });
-
-  static readonly #controllers: Readonly<ControllerConstructor[]> =
-    Object.freeze([UserController]);
-
+  readonly #databaseContext: IDbContext;
   readonly #express = express();
   readonly #port = Number(process.env.ACICULATE_API_PORT);
-
-  #registerDependencies() {
-    registry.provideMany(ApplicationContext.#dependencies);
-
-    registry.provide<IApplicationContext>(
-      dependencyInjectionTokens.applicationContext,
-      this
-    );
-  }
 
   #wireController<T extends IController>(
     controllerConstructor: ControllerConstructor<T>
@@ -55,15 +24,12 @@ export class ApplicationContext implements IApplicationContext {
     const router = Router();
 
     const routePrefix: string = Reflect.getMetadata(
-      httpRoutingMetadataKeys.routePrefix,
+      httpMetadataKeys.routePrefix,
       controllerConstructor
     );
 
     const controllerRoutes: Readonly<Readonly<IControllerRoute<T>>[]> =
-      Reflect.getMetadata(
-        httpRoutingMetadataKeys.routes,
-        controllerConstructor
-      );
+      Reflect.getMetadata(httpMetadataKeys.routes, controllerConstructor);
 
     controllerRoutes.forEach((r) => {
       router[r.httpVerb](r.route, r.action);
@@ -72,15 +38,8 @@ export class ApplicationContext implements IApplicationContext {
     this.#express.use(routePrefix, router);
   }
 
-  #wireControllers() {
-    ApplicationContext.#controllers.forEach((c) => {
-      this.#wireController(c);
-    });
-  }
-
-  public startApi() {
-    this.#registerDependencies();
-    this.#wireControllers();
+  public async startApi() {
+    await this.#databaseContext.migrate();
 
     this.#express.use(
       cors({
@@ -96,6 +55,19 @@ export class ApplicationContext implements IApplicationContext {
 
     this.#express.listen(this.#port, () => {
       console.log(`Aciculate API listening on port: ${this.#port}`);
+    });
+  }
+
+  public constructor(
+    @inject(dependencyInjectionTokens.databaseContext)
+    databaseContext: IDbContext,
+    @inject(dependencyInjectionTokens.httpControllerDefinitions)
+    httpControllers: Readonly<ControllerConstructor[]>
+  ) {
+    this.#databaseContext = databaseContext;
+
+    httpControllers.forEach((c) => {
+      this.#wireController(c);
     });
   }
 }

@@ -1,5 +1,4 @@
 import { IInjection } from '../interfaces';
-import 'reflect-metadata';
 
 export const injectMetadataKey = Symbol('inject');
 

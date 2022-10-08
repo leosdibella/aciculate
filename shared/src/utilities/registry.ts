@@ -1,7 +1,6 @@
 import { ApiError } from '../classes';
 import { Constructor } from '../types';
 import { IInjection, IRegistry, IRegistryValue } from '../interfaces';
-import 'reflect-metadata';
 import { injectMetadataKey } from 'src/decorators';
 
 const registryValues: Partial<Record<symbol, IRegistryValue>> = {};
