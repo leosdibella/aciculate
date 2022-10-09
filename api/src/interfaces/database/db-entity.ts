@@ -1,5 +1,3 @@
-import { DbTableName } from '@enums';
-import { DbSchema } from '@types';
 import { IBaseModel } from '@interfaces/models';
 
 export interface IDbEntity<T extends IBaseModel> {
@@ -8,7 +6,4 @@ export interface IDbEntity<T extends IBaseModel> {
   toModel(): T;
   toJson(): string;
   fromJson(json: string): Partial<T>;
-  readonly tableName: DbTableName;
-  readonly schema: DbSchema<T>;
-  readonly userImmutableColumns?: Readonly<Extract<keyof T, string>[]>;
 }

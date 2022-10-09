@@ -2,104 +2,112 @@ import { DbColumnType, DbTableName } from '@enums';
 import { IBaseModel } from '@interfaces';
 import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
-import { DbColumn, DbSchema } from '@types';
+import { DbColumn, DbEntity, DbSchema } from '@types';
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode } from '@shared/enums';
-import { field } from '@decorators/database';
+import { field, foreignKey, primaryKey, userImmutable } from '@decorators';
+import { databaseMetadataKeys } from '@data/database-metadata-keys';
 
 export abstract class BaseEntity<T extends IBaseModel>
-  implements Partial<IBaseModel>
+  implements DbEntity<IBaseModel>
 {
-  protected static readonly _schema = Object.freeze({
-    id: Object.freeze({
-      isPrimaryKey: true,
-      type: DbColumnType.uuid,
-      defaultValue: 'uuid_generate_v4()'
-    }),
-    deleted: Object.freeze({
-      type: DbColumnType.boolean,
-      defaultValue: false
-    }),
-    updatedDate: Object.freeze({
-      type: DbColumnType.timestamptz,
-      defaultValue: 'now()'
-    }),
-    createdDate: Object.freeze({
-      type: DbColumnType.timestamptz,
-      defaultValue: 'now()'
-    }),
-    updatedBy: Object.freeze({
-      isNullable: true,
-      type: DbColumnType.uuid,
-      foreignKeyTable: DbTableName.user,
-      foreignKeyColumn: 'id'
-    }),
-    createdBy: Object.freeze({
-      isNullable: true,
-      type: DbColumnType.uuid,
-      foreignKeyTable: DbTableName.user,
-      foreignKeyColumn: 'id'
-    })
-  });
+  protected get _schema(): DbSchema<T> {
+    return Reflect.getMetadata(
+      databaseMetadataKeys.field,
+      this.constructor.prototype
+    );
+  }
 
-  public static userImmutableColumns: Readonly<
-    Extract<keyof IBaseModel, string>[]
-  > = Object.freeze([
-    'id',
-    'updatedDate',
-    'createdDate',
-    'createdBy',
-    'updatedBy'
-  ]);
+  protected get _tableName(): string {
+    return Reflect.getMetadata(
+      databaseMetadataKeys.entity,
+      this.constructor.prototype
+    );
+  }
 
   protected readonly _createdDate?: Date;
   protected readonly _updatedDate?: Date;
-  public abstract readonly schema: DbSchema<T>;
-  public abstract readonly tableName: string;
 
-  @field()
+  @field({
+    type: DbColumnType.uuid,
+    defaultValue: 'uuid_generate_v4()'
+  })
+  @(primaryKey<IBaseModel>)
+  @(userImmutable<IBaseModel>)
   public readonly id?: string;
+
+  @field({
+    type: DbColumnType.boolean
+  })
   public readonly deleted?: boolean;
+
+  @field({
+    type: DbColumnType.uuid
+  })
+  @foreignKey({
+    foreignKeyTable: DbTableName.user,
+    foreignKeyColumn: 'id'
+  })
+  @(userImmutable<IBaseModel>)
   public readonly createdBy?: string;
+
+  @field({
+    type: DbColumnType.uuid
+  })
+  @foreignKey({
+    foreignKeyTable: DbTableName.user,
+    foreignKeyColumn: 'id'
+  })
+  @(userImmutable<IBaseModel>)
   public readonly updatedBy?: string;
 
+  @field({
+    type: DbColumnType.timestamptz,
+    defaultValue: 'now()'
+  })
   public get createdDate() {
     return this._createdDate ? new Date(this._createdDate) : undefined;
   }
 
+  @field({
+    type: DbColumnType.timestamptz,
+    defaultValue: 'now()'
+  })
   public get updatedDate() {
     return this._updatedDate ? new Date(this._updatedDate) : undefined;
   }
 
   public toModel(): T {
+    const schema = this._schema;
+    const tableName = this._tableName;
     const errors: IApiError[] = [];
     const model: Partial<T> = {};
 
-    (
-      Object.keys(this.schema) as Extract<keyof this & keyof T, string>[]
-    ).forEach((k) => {
-      const column = this.schema[k];
+    (Object.keys(schema) as Extract<keyof this & keyof T, string>[]).forEach(
+      (k) => {
+        const column = schema[k];
 
-      if (
-        typeof column === 'object' &&
-        !Array.isArray(column) &&
-        (column as DbColumn).isSecured
-      ) {
-        return;
-      }
+        if (
+          typeof column === 'object' &&
+          !Array.isArray(column) &&
+          (column as DbColumn).isSecured
+        ) {
+          return;
+        }
 
-      if (this[k] === undefined) {
-        errors.push({
-          errorCode: ApiErrorCode.databseSchemaValidationError,
-          message: `${this.tableName} is missing value for property ${k}.`
-        });
-      } else {
-        model[k] = this[k] as unknown as T[Extract<
-          keyof this & keyof T,
-          string
-        >];
+        if (this[k] === undefined) {
+          errors.push({
+            errorCode: ApiErrorCode.databseSchemaValidationError,
+            message: `${tableName} is missing value for property ${k}.`
+          });
+        } else {
+          model[k] = this[k] as unknown as T[Extract<
+            keyof this & keyof T,
+            string
+          >];
+        }
       }
-    });
+    );
 
     if (errors.length) {
       throw new ApiError(errors);
@@ -113,6 +121,8 @@ export abstract class BaseEntity<T extends IBaseModel>
   }
 
   public fromJson(serialized: string): Partial<T> {
+    const schema = this._schema;
+    const tableName = this._tableName;
     const apiErrors: IApiError[] = [];
     let json: Record<string, unknown> = {};
 
@@ -122,15 +132,13 @@ export abstract class BaseEntity<T extends IBaseModel>
       if (typeof json !== 'object' || !json || Array.isArray(json)) {
         apiErrors.push({
           errorCode: ApiErrorCode.databseSchemaValidationError,
-          message: `${
-            this.tableName
-          } must be an object, recevied ${typeof json}.`
+          message: `${tableName} must be an object, recevied ${typeof json}.`
         });
       }
     } catch {
       apiErrors.push({
         errorCode: ApiErrorCode.databseSchemaValidationError,
-        message: `${this.tableName} must be an object, unable to parse json received.`
+        message: `${tableName} must be an object, unable to parse json received.`
       });
     }
 
@@ -140,13 +148,10 @@ export abstract class BaseEntity<T extends IBaseModel>
 
     const model = {} as Partial<T>;
 
-    (Object.keys(this.schema) as Extract<keyof T, string>[])
-      .filter(
-        (k) =>
-          typeof this.schema[k] !== 'string' && !Array.isArray(this.schema[k])
-      )
+    (Object.keys(schema) as Extract<keyof T, string>[])
+      .filter((k) => typeof schema[k] !== 'string' && !Array.isArray(schema[k]))
       .forEach((cn) => {
-        const column = this.schema[cn] as DbColumn;
+        const column = schema[cn] as DbColumn;
         const value = json[cn];
 
         if (column.isSecured) {
@@ -162,7 +167,7 @@ export abstract class BaseEntity<T extends IBaseModel>
           } else if (value !== undefined) {
             apiErrors.push({
               errorCode: ApiErrorCode.databseSchemaValidationError,
-              message: `${this.tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
+              message: `${tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
             });
           }
         }
@@ -176,7 +181,7 @@ export abstract class BaseEntity<T extends IBaseModel>
           } else if (value !== undefined) {
             apiErrors.push({
               errorCode: ApiErrorCode.databseSchemaValidationError,
-              message: `${this.tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
+              message: `${tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
             });
           }
         }
@@ -193,7 +198,7 @@ export abstract class BaseEntity<T extends IBaseModel>
           } else if (value !== undefined) {
             apiErrors.push({
               errorCode: ApiErrorCode.databseSchemaValidationError,
-              message: `${this.tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
+              message: `${tableName} expects ${cn} to be a ${column.type}, received: ${value}.`
             });
           }
         }
@@ -213,13 +218,13 @@ export abstract class BaseEntity<T extends IBaseModel>
             if (value !== null && isNaN(date!.getTime())) {
               apiErrors.push({
                 errorCode: ApiErrorCode.databseSchemaValidationError,
-                message: `${this.tableName} expects ${cn} to be a serialized date string, received: ${value}.`
+                message: `${tableName} expects ${cn} to be a serialized date string, received: ${value}.`
               });
             }
           } else if (value !== undefined) {
             apiErrors.push({
               errorCode: ApiErrorCode.databseSchemaValidationError,
-              message: `${this.tableName} expects ${cn} to be a serialized date string, received: ${value}.`
+              message: `${tableName} expects ${cn} to be a serialized date string, received: ${value}.`
             });
           }
         }

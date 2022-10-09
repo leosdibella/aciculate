@@ -7,11 +7,9 @@ export function entity<T extends IBaseModel>(tableName?: string) {
   return function entityDecorator<S extends T>(
     target: Constructor<IDbEntity<S>>
   ) {
-    const defaultTableName = toPascalCase(target.name.split('Entity')[0]);
-
     Reflect.defineMetadata(
-      databaseMetadataKeys.tableName,
-      tableName ?? defaultTableName,
+      databaseMetadataKeys.entity,
+      tableName || target.name.split('Entity')[0],
       target
     );
   };
