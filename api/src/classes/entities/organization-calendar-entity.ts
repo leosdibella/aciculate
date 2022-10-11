@@ -1,31 +1,28 @@
+import { entity, field, foreignKey } from '@decorators/database';
 import { DbColumnType, DbTableName } from '@enums';
 import { IOrganizationCalendarModel } from '@interfaces/models';
 import { DbEntity } from '@types';
 import { BaseEntity } from './base-entity';
 
+@entity()
 export class OrganizationCalendarEntity
   extends BaseEntity<IOrganizationCalendarModel>
   implements DbEntity<IOrganizationCalendarModel>
 {
-  public static readonly tableName = DbTableName.organizationCalendar;
-
-  public static readonly schema = Object.freeze({
-    ...BaseEntity._schema,
-    calendarId: Object.freeze({
-      type: DbColumnType.uuid,
-      foreignKeyTable: DbTableName.calendar,
-      foreignKeyColumn: 'id'
-    }),
-    organizationId: Object.freeze({
-      type: DbColumnType.uuid,
-      foreignKeyTable: DbTableName.organization,
-      foreignKeyColumn: 'id'
-    })
-  });
-
-  public readonly schema = OrganizationCalendarEntity.schema;
-  public readonly tableName = OrganizationCalendarEntity.tableName;
+  @field({
+    type: DbColumnType.uuid
+  })
+  @foreignKey({
+    tableName: DbTableName.calendar
+  })
   public readonly organizationId?: string;
+
+  @field({
+    type: DbColumnType.uuid
+  })
+  @foreignKey({
+    tableName: DbTableName.calendar
+  })
   public readonly calendarId?: string;
 
   public constructor(model: Partial<IOrganizationCalendarModel>) {

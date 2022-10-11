@@ -1,6 +1,6 @@
 import { DbColumnType } from '@enums';
 import { DbEntity } from '@types';
-import { generateHash, generateSalt, validateColumnValues } from '@utilities';
+import { generateHash, generateSalt } from '@utilities';
 import {
   ICalendarModel,
   IDbSeedData,
@@ -35,12 +35,10 @@ export class UserEntity
     };
   }
 
-  private readonly _organizations: Readonly<
-    Readonly<IOrganizationModel[]>
-  > | null = null;
+  private readonly _organizations: Readonly<Readonly<IOrganizationModel[]>> =
+    [];
 
-  private readonly _calendars: Readonly<Readonly<ICalendarModel>[]> | null =
-    null;
+  private readonly _calendars: Readonly<Readonly<ICalendarModel>[]> = [];
 
   @field({
     type: DbColumnType.varchar,
@@ -87,14 +85,6 @@ export class UserEntity
 
   public get organizations() {
     return this._organizations;
-  }
-
-  public validateInsert() {
-    validateColumnValues(this);
-  }
-
-  public validateUpdate(model: IUserModel) {
-    validateColumnValues(this, model);
   }
 
   public constructor(model: Partial<IUserModel>) {

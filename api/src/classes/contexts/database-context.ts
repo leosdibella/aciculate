@@ -5,6 +5,7 @@ import {
   IBaseModel,
   IDbContext,
   IDbEntityConstructor,
+  IDbSeedData,
   IOrganizationModel,
   IRoleModel,
   IUserContext,
@@ -18,47 +19,11 @@ import {
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode, Role } from '@shared/enums';
 import { DbTableName } from '@enums';
-import {
-  CalendarEntity,
-  CalendarEventEntity,
-  OrganizationCalendarEntity,
-  OrganizationEntity,
-  OrganizationUserRoleEntity,
-  RoleEntity,
-  UserEntity
-} from '@classes/entities';
 import { inject } from '@shared/decorators';
-import { dependencyInjectionTokens } from 'src/data';
+import { databaseMetadataKeys, dependencyInjectionTokens } from 'src/data';
 
 export class DbContext implements IDbContext {
   static readonly #dbPool = new Pool();
-
-  static readonly #dbSchema: { [key in DbTableName]: DbSchema<DbModel<key>> } =
-    Object.freeze({
-      [DbTableName.calendar]: CalendarEntity.schema,
-      [DbTableName.calendarEvent]: CalendarEventEntity.schema,
-      [DbTableName.organization]: OrganizationEntity.schema,
-      [DbTableName.user]: UserEntity.schema,
-      [DbTableName.role]: RoleEntity.schema,
-      [DbTableName.organizationCalendar]: OrganizationCalendarEntity.schema,
-      [DbTableName.organizationUserRole]: OrganizationUserRoleEntity.schema
-    });
-
-  static readonly #seedableEntityConstructors: Readonly<
-    Partial<{
-      [key in DbTableName]: IDbEntityConstructor<DbModel<key>>;
-    }>
-  > = Object.freeze({
-    [DbTableName.role]: RoleEntity,
-    [DbTableName.user]: UserEntity,
-    [DbTableName.organization]: OrganizationEntity
-  });
-
-  static readonly #seedingInsertionOrder = Object.freeze([
-    DbTableName.user,
-    DbTableName.organization,
-    DbTableName.role
-  ]);
 
   readonly #pool = DbContext.#dbPool;
 
@@ -212,15 +177,18 @@ export class DbContext implements IDbContext {
   }
 
   public async seed<T extends IBaseModel>(
+    tableName: DbTableName,
     EntityConstructor: IDbEntityConstructor<T>
   ) {
-    if (!EntityConstructor.seed && !EntityConstructor.seedAsync) {
+    if (!EntityConstructor.seed) {
       return;
     }
 
-    const seedData = EntityConstructor.seedAsync
-      ? await EntityConstructor.seedAsync()
-      : EntityConstructor.seed!();
+    const seedData = (
+      EntityConstructor.seed.constructor.name === 'AsyncFunction'
+        ? await EntityConstructor.seed()
+        : EntityConstructor.seed()
+    ) as IDbSeedData<T>;
 
     const values: T[] = [];
 
@@ -229,11 +197,7 @@ export class DbContext implements IDbContext {
         .map((c, j) => format('%s = %L', c, seedData.values[j][c]))
         .join(' AND ');
 
-      const query = format(
-        `SELECT * FROM ${EntityConstructor.tableName} WHERE %s;`,
-        conditions
-      );
-
+      const query = format(`SELECT * FROM ${tableName} WHERE %s;`, conditions);
       const result = await this.#pool.query(query);
 
       if (result.rows.length > 0) {
@@ -257,17 +221,21 @@ export class DbContext implements IDbContext {
     let user: IUserModel | undefined;
     let role: IRoleModel | undefined;
 
-    (Object.keys(DbContext.#dbSchema) as DbTableName[]).forEach((t) => {
-      this.migrateSchema<DbModel<typeof t>>(t, DbContext.#dbSchema[t]);
+    (Object.keys(this._databaseEntities) as DbTableName[]).forEach((t) => {
+      const schema: DbSchema<DbModel<typeof t>> = Reflect.getMetadata(
+        databaseMetadataKeys.field,
+        this._databaseEntities[t].prototype
+      );
+
+      this.migrateSchema<DbModel<typeof t>>(t, schema);
     });
 
-    for (let i = 0; i < DbContext.#seedingInsertionOrder.length; ++i) {
-      const tableName = DbContext.#seedingInsertionOrder[i];
-
-      const seedableConstructor =
-        DbContext.#seedableEntityConstructors[tableName]!;
+    for (let i = 0; i < this._seedableEntities.length; ++i) {
+      const tableName = this._seedableEntities[i];
+      const seedableConstructor = this._databaseEntities[tableName];
 
       const values = await this.seed<DbModel<typeof tableName>>(
+        tableName,
         seedableConstructor as IDbEntityConstructor<DbModel<typeof tableName>>
       );
 
@@ -292,7 +260,11 @@ export class DbContext implements IDbContext {
     }
 
     if (user && role && organization) {
-      const organizationUserRole = new OrganizationUserRoleEntity({
+      const organizationUserRoleEntity =
+        this._databaseEntities[DbTableName.organizationUserRole];
+
+      // eslint-disable-next-line new-cap
+      const organizationUserRole = new organizationUserRoleEntity({
         userId: user.id,
         organizationId: organization.id,
         roleId: role.id,
@@ -305,7 +277,13 @@ export class DbContext implements IDbContext {
   }
 
   public constructor(
+    @inject(dependencyInjectionTokens.databaseEntities)
+    private readonly _databaseEntities: Readonly<{
+      [key in DbTableName]: IDbEntityConstructor<DbModel<key>>;
+    }>,
+    @inject(dependencyInjectionTokens.seedableEntities)
+    private readonly _seedableEntities: Readonly<DbTableName[]>,
     @inject(dependencyInjectionTokens.userContext)
-    private readonly _userContext: IUserContext | null | undefined
+    private readonly _userContext: Readonly<IUserContext> | null | undefined
   ) {}
 }

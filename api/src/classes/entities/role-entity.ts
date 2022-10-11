@@ -2,24 +2,15 @@ import { DbEntity } from '@types';
 import { IRoleModel, IDbSeedData } from '@interfaces';
 import { BaseEntity } from './base-entity';
 import { Role } from '@shared/enums';
-import { DbTableName, DbColumnType } from '@enums';
+import { DbColumnType } from '@enums';
+import { entity, field } from '@decorators/database';
 
+@entity()
 export class RoleEntity
   extends BaseEntity<IRoleModel>
   implements DbEntity<IRoleModel>
 {
-  static readonly #values: Partial<Readonly<IRoleModel>>[];
-
-  public static readonly tableName = DbTableName.role;
-
-  public static readonly schema = Object.freeze({
-    ...BaseEntity._schema,
-    name: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 512
-    })
-  });
+  private static readonly _values: Readonly<Partial<IRoleModel>>[];
 
   public static seed(): IDbSeedData<IRoleModel> {
     return {
@@ -30,15 +21,18 @@ export class RoleEntity
   }
 
   public static set values(values: Readonly<Readonly<Partial<IRoleModel>>[]>) {
-    values.forEach((v) => RoleEntity.#values.push(v));
+    values.forEach((v) => RoleEntity._values.push(v));
   }
 
   public static get values(): Readonly<Readonly<Partial<IRoleModel>>[]> {
-    return Object.freeze([...RoleEntity.#values]);
+    return Object.freeze([...RoleEntity._values]);
   }
 
-  public readonly schema = RoleEntity.schema;
-  public readonly tableName = RoleEntity.tableName;
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 512
+  })
   public readonly name?: Role;
 
   public constructor(model: Partial<IRoleModel>) {

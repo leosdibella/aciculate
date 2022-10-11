@@ -7,6 +7,7 @@ export type PrimaryKeyColumn = Readonly<{
   readonly minLength?: never;
   readonly isNullable?: never;
   readonly isSecured?: true;
+  readonly validate?: never;
 }>;
 
 export type ForeignKeyColumn = Readonly<{
@@ -16,6 +17,7 @@ export type ForeignKeyColumn = Readonly<{
   readonly isSecured?: true;
   readonly maxLength?: never;
   readonly minLength?: never;
+  readonly validate?: never;
 }>;
 
 export type BooleanColumn = Readonly<{
@@ -25,6 +27,7 @@ export type BooleanColumn = Readonly<{
   readonly isSecured?: true;
   readonly maxLength?: never;
   readonly minLength?: never;
+  readonly validate?: never;
 }>;
 
 export type JsonColumn = Readonly<{
@@ -34,6 +37,7 @@ export type JsonColumn = Readonly<{
   readonly isSecured?: true;
   readonly maxLength?: never;
   readonly minLength?: never;
+  validate?(value: string): void;
 }>;
 
 export type DateColumn = Readonly<{
@@ -43,6 +47,7 @@ export type DateColumn = Readonly<{
   readonly isSecured?: true;
   readonly maxLength?: never;
   readonly minLength?: never;
+  validate?(value: Date): void;
 }>;
 
 export type DateTimeColumn = Readonly<{
@@ -52,6 +57,7 @@ export type DateTimeColumn = Readonly<{
   readonly isSecured?: true;
   readonly maxLength?: never;
   readonly minLength?: never;
+  validate?(value: Date): void;
 }>;
 
 export type StringColumn = Readonly<{
@@ -61,6 +67,7 @@ export type StringColumn = Readonly<{
   readonly isNullable?: true;
   readonly defaultValue?: string;
   readonly isSecured?: true;
+  validate?(value: string): void;
 }>;
 
 export type SmallIntegerColumn = Readonly<{
@@ -70,6 +77,7 @@ export type SmallIntegerColumn = Readonly<{
   readonly isNullable?: true;
   readonly defaultValue?: number;
   readonly isSecured?: true;
+  validate?(value: number): void;
 }>;
 
 export type DbColumn =

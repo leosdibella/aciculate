@@ -1,7 +1,7 @@
 import { DbTableName } from '@enums';
 
 export interface IForeignKey {
-  readonly foreignKeyTable: DbTableName;
-  readonly foreignKeyColumn: string;
+  readonly tableName: DbTableName;
+  readonly columnName?: string;
   readonly cascadeOnDelete?: true;
 }

@@ -11,20 +11,6 @@ import { databaseMetadataKeys } from '@data/database-metadata-keys';
 export abstract class BaseEntity<T extends IBaseModel>
   implements DbEntity<IBaseModel>
 {
-  protected get _schema(): DbSchema<T> {
-    return Reflect.getMetadata(
-      databaseMetadataKeys.field,
-      this.constructor.prototype
-    );
-  }
-
-  protected get _tableName(): string {
-    return Reflect.getMetadata(
-      databaseMetadataKeys.entity,
-      this.constructor.prototype
-    );
-  }
-
   protected readonly _createdDate?: Date;
   protected readonly _updatedDate?: Date;
 
@@ -45,8 +31,7 @@ export abstract class BaseEntity<T extends IBaseModel>
     type: DbColumnType.uuid
   })
   @foreignKey({
-    foreignKeyTable: DbTableName.user,
-    foreignKeyColumn: 'id'
+    tableName: DbTableName.user
   })
   @(userImmutable<IBaseModel>)
   public readonly createdBy?: string;
@@ -55,8 +40,7 @@ export abstract class BaseEntity<T extends IBaseModel>
     type: DbColumnType.uuid
   })
   @foreignKey({
-    foreignKeyTable: DbTableName.user,
-    foreignKeyColumn: 'id'
+    tableName: DbTableName.user
   })
   @(userImmutable<IBaseModel>)
   public readonly updatedBy?: string;
@@ -77,9 +61,23 @@ export abstract class BaseEntity<T extends IBaseModel>
     return this._updatedDate ? new Date(this._updatedDate) : undefined;
   }
 
+  public get schema(): DbSchema<T> {
+    return Reflect.getMetadata(
+      databaseMetadataKeys.field,
+      this.constructor.prototype
+    );
+  }
+
+  public get tableName(): DbTableName {
+    return Reflect.getMetadata(
+      databaseMetadataKeys.entity,
+      this.constructor.prototype
+    );
+  }
+
   public toModel(): T {
-    const schema = this._schema;
-    const tableName = this._tableName;
+    const schema = this.schema;
+    const tableName = this.tableName;
     const errors: IApiError[] = [];
     const model: Partial<T> = {};
 
@@ -121,8 +119,8 @@ export abstract class BaseEntity<T extends IBaseModel>
   }
 
   public fromJson(serialized: string): Partial<T> {
-    const schema = this._schema;
-    const tableName = this._tableName;
+    const schema = this.schema;
+    const tableName = this.tableName;
     const apiErrors: IApiError[] = [];
     let json: Record<string, unknown> = {};
 

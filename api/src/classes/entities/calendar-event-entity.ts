@@ -2,143 +2,126 @@ import { TimeInterval } from '@shared/enums';
 import { validateTimeInterval, validateTimeZone } from '@shared/utilities';
 import { DbTableName, DbColumnType } from '@enums';
 import { DbEntity } from '@types';
-import { validateColumnValues } from '@utilities';
 import { ICalendarEventModel } from '@interfaces';
 import { BaseEntity } from './base-entity';
+import { entity, field, foreignKey } from '@decorators/database';
 
+@entity()
 export class CalendarEventEntity
   extends BaseEntity<ICalendarEventModel>
   implements DbEntity<ICalendarEventModel>
 {
-  public static readonly tableName = DbTableName.calendar;
-
-  public static readonly schema = {
-    ...BaseEntity._schema,
-    data: Object.freeze({
-      type: DbColumnType.json,
-      isNullable: true
-    }),
-    title: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 512
-    }),
-    description: Object.freeze({
-      type: DbColumnType.varchar,
-      maxLength: 1024,
-      isNullable: true
-    }),
-    startDate: Object.freeze({
-      type: DbColumnType.date
-    }),
-    startTime: Object.freeze({
-      type: DbColumnType.smallint
-    }),
-    startTimeZone: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 512
-    }),
-    endTime: Object.freeze({
-      type: DbColumnType.smallint,
-      isNullable: true
-    }),
-    endDate: Object.freeze({
-      type: DbColumnType.date,
-      isNullable: true
-    }),
-    endTimeZone: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 512,
-      isNullable: true
-    }),
-    numberOfOccurences: Object.freeze({
-      type: DbColumnType.smallint,
-      isNullable: true
-    }),
-    repeatOn: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 7,
-      isNullable: true
-    }),
-    isAllDay: Object.freeze({
-      type: DbColumnType.boolean,
-      defaultValue: false
-    }),
-    timeInterval: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 7,
-      isNullable: true
-    }),
-    timeIntervalDuration: Object.freeze({
-      type: DbColumnType.smallint,
-      isNullable: true
-    }),
-    isPrivate: Object.freeze({
-      type: DbColumnType.boolean,
-      defaultValue: false
-    }),
-    calendarId: Object.freeze({
-      type: DbColumnType.uuid,
-      foreignKeyTable: DbTableName.calendar,
-      foreignKeyColumn: 'id'
-    })
-  };
-
-  private _validate() {
-    if (this.timeInterval?.length) {
-      validateTimeInterval(this.timeInterval);
-    }
-
-    if (this.startTimeZone?.length) {
-      validateTimeZone(this.startTimeZone);
-    }
-
-    if (this.endTimeZone?.length) {
-      validateTimeZone(this.endTimeZone);
-    }
-  }
-
-  public readonly tableName = CalendarEventEntity.tableName;
-  public readonly schema = CalendarEventEntity.schema;
-
   protected readonly _startDate?: Date;
   protected readonly _endDate?: Date | null;
 
+  @field({
+    type: DbColumnType.json,
+    isNullable: true
+  })
   public readonly data?: Readonly<Record<string, unknown>> | null;
+
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 512
+  })
   public readonly title?: string;
+
+  @field({
+    type: DbColumnType.varchar,
+    maxLength: 1024,
+    isNullable: true
+  })
   public readonly description?: string | null;
+
+  @field({
+    type: DbColumnType.boolean
+  })
   public readonly isPrivate?: boolean;
+
+  @field({
+    type: DbColumnType.boolean
+  })
   public readonly isAllDay?: boolean;
+
+  @field({
+    type: DbColumnType.smallint
+  })
   public readonly startTime?: number;
+
+  @field({
+    type: DbColumnType.smallint,
+    isNullable: true
+  })
   public readonly endTime?: number | null;
+
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 512,
+    validate: validateTimeZone
+  })
   public readonly startTimeZone?: string;
+
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 512,
+    isNullable: true,
+    validate: validateTimeZone
+  })
   public readonly endTimeZone?: string | null;
+
+  @field({
+    type: DbColumnType.smallint,
+    isNullable: true
+  })
   public readonly numberOfOccurences?: number | null;
+
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 7,
+    isNullable: true
+  })
   public readonly repeatOn?: string | null;
+
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 7,
+    isNullable: true,
+    validate: validateTimeInterval
+  })
   public readonly timeInterval?: TimeInterval | null;
+
+  @field({
+    type: DbColumnType.smallint,
+    isNullable: true
+  })
   public readonly timeIntervalDuration?: number | null;
+
+  @field({
+    type: DbColumnType.uuid
+  })
+  @foreignKey({
+    tableName: DbTableName.calendar
+  })
   public readonly calendarId?: string;
 
+  @field({
+    type: DbColumnType.date
+  })
   public get startDate() {
     return this._startDate ? new Date(this._startDate) : this._startDate;
   }
 
+  @field({
+    type: DbColumnType.date,
+    isNullable: true
+  })
   public get endDate() {
     return this._endDate ? new Date(this._endDate) : this._endDate;
-  }
-
-  public validateInsert() {
-    validateColumnValues(this);
-    this._validate();
-  }
-
-  public validateUpdate(model: ICalendarEventModel) {
-    validateColumnValues(this, model);
-    this._validate();
   }
 
   public constructor(model: Partial<ICalendarEventModel>) {

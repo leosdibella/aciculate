@@ -1,33 +1,14 @@
-import { DbTableName, DbColumnType } from '@enums';
+import { entity, field } from '@decorators/database';
+import { DbColumnType } from '@enums';
 import { IDbSeedData, IOrganizationModel, IUserModel } from '@interfaces';
 import { DbEntity } from '@types';
 import { BaseEntity } from './base-entity';
 
+@entity()
 export class OrganizationEntity
   extends BaseEntity<IOrganizationModel>
   implements DbEntity<IOrganizationModel>
 {
-  public static readonly tableName = DbTableName.organization;
-
-  public static readonly schema = Object.freeze({
-    ...BaseEntity._schema,
-    name: Object.freeze({
-      type: DbColumnType.varchar,
-      minLength: 1,
-      maxLength: 512
-    }),
-    description: Object.freeze({
-      type: DbColumnType.varchar,
-      maxLength: 1024,
-      isNullable: true
-    }),
-    data: Object.freeze({
-      type: DbColumnType.json,
-      isNullable: true
-    }),
-    users: Object.freeze([])
-  });
-
   public static seed(): IDbSeedData<IOrganizationModel> {
     return {
       values: [
@@ -40,12 +21,27 @@ export class OrganizationEntity
     };
   }
 
-  public readonly schema = OrganizationEntity.schema;
-  public readonly tableName = OrganizationEntity.tableName;
+  @field({
+    type: DbColumnType.json,
+    isNullable: true
+  })
   public readonly data?: Readonly<Record<string, unknown>> | null;
+
+  @field({
+    type: DbColumnType.varchar,
+    minLength: 1,
+    maxLength: 512
+  })
   public readonly name?: string;
+
+  @field({
+    type: DbColumnType.varchar,
+    maxLength: 1024,
+    isNullable: true
+  })
   public readonly description?: string | null;
-  public readonly users: Readonly<Readonly<IUserModel>[]> = [];
+
+  public readonly users: Readonly<Readonly<IUserModel>[]>;
 
   public constructor(model: Partial<IOrganizationModel>) {
     super(model);
