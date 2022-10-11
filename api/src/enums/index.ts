@@ -1,2 +1,1 @@
-export * from './db-column-type';
-export * from './db-table-name';
+export * from './database';

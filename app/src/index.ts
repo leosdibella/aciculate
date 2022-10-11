@@ -37,7 +37,7 @@ setTimeout(() => {
 }, millisecondsPerSecond);
 */
 
-import { DbTableName } from 'shared/enums';
+import { EntityName } from '@shared/enums';
 
 const app = document.createElement('div');
 
@@ -45,7 +45,7 @@ app.innerHTML = 'HI';
 
 document.body.appendChild(app);
 
-fetch(`http://${ACICULATE_API_ORIGIN}/${DbTableName.calendar}/0`).then(
+fetch(`http://${ACICULATE_API_ORIGIN}/${EntityName.calendar}/0`).then(
   async (res) => {
     const json = await res.json();
     console.log(json);

@@ -1,13 +1,13 @@
 import { databaseMetadataKeys } from '@data/database-metadata-keys';
 import { IBaseModel, IForeignKey } from '@interfaces';
 import { Constructor } from '@shared/types';
-import { DbEntity } from '@types';
+import { Entity } from '@types';
 
 export function foreignKey<T extends IBaseModel>(
   definition: IForeignKey
 ): PropertyDecorator {
   return function foreignKeyDecorator<S extends T>(
-    target: Constructor<DbEntity<S>>,
+    target: Constructor<Entity<S>>,
     proeprtyKey: Extract<keyof S, string>
   ) {
     const forgienKeyDictionary: Partial<
@@ -15,8 +15,8 @@ export function foreignKey<T extends IBaseModel>(
     > = Reflect.getMetadata(databaseMetadataKeys.forgienKey, target) ?? {};
 
     forgienKeyDictionary[proeprtyKey] = Object.freeze({
-      tableName: definition.tableName,
-      columnName: definition.columnName || 'id',
+      entityName: definition.entityName,
+      fieldName: definition.fieldName || 'id',
       cascadeOnDelete: definition.cascadeOnDelete
     });
 

@@ -1,8 +1,12 @@
 import 'reflect-metadata';
 import { exit } from 'process';
-import { IApplicationContext, IDbEntityConstructor } from '@interfaces';
 import {
-  DbContext,
+  IApplicationContext,
+  IController,
+  IEntityConstructor
+} from '@interfaces';
+import {
+  DatabaseContext,
   ApplicationContext,
   UserEntity,
   RoleEntity,
@@ -17,28 +21,29 @@ import { IRegistryValue } from '@shared/interfaces';
 import { UserController } from '@classes/controllers';
 import { OrganizationService, UserService } from '@classes/services';
 import { dependencyInjectionTokens } from '@data';
-import { DbTableName } from '@enums';
-import { ControllerConstructor, DbModel } from '@types';
+import { EntityName } from '@enums';
+import { EntityNameModel } from '@types';
+import { Constructor } from '@shared/types';
 
 const _databaseEntities: Readonly<{
-  [key in DbTableName]: IDbEntityConstructor<DbModel<key>>;
+  [key in EntityName]: IEntityConstructor<EntityNameModel<key>>;
 }> = Object.freeze({
-  [DbTableName.user]: UserEntity,
-  [DbTableName.role]: RoleEntity,
-  [DbTableName.calendar]: CalendarEntity,
-  [DbTableName.organization]: OrganizationEntity,
-  [DbTableName.calendarEvent]: CalendarEventEntity,
-  [DbTableName.organizationCalendar]: OrganizationCalendarEntity,
-  [DbTableName.organizationUserRole]: OrganizationUserRoleEntity
+  [EntityName.user]: UserEntity,
+  [EntityName.role]: RoleEntity,
+  [EntityName.calendar]: CalendarEntity,
+  [EntityName.organization]: OrganizationEntity,
+  [EntityName.calendarEvent]: CalendarEventEntity,
+  [EntityName.organizationCalendar]: OrganizationCalendarEntity,
+  [EntityName.organizationUserRole]: OrganizationUserRoleEntity
 });
 
-const _seedableEntities: Readonly<DbTableName[]> = Object.freeze([
-  DbTableName.role,
-  DbTableName.user,
-  DbTableName.organization
+const _seedableEntities: Readonly<EntityName[]> = Object.freeze([
+  EntityName.role,
+  EntityName.user,
+  EntityName.organization
 ]);
 
-const _httpControllerDefintions: Readonly<ControllerConstructor[]> =
+const _controllerDefintions: Readonly<Constructor<IController>[]> =
   Object.freeze([UserController]);
 
 const _dependencies: Readonly<
@@ -48,7 +53,7 @@ const _dependencies: Readonly<
     value: ApplicationContext
   }),
   [dependencyInjectionTokens.databaseContext]: Object.freeze({
-    value: DbContext
+    value: DatabaseContext
   }),
   [dependencyInjectionTokens.userService]: Object.freeze({
     value: UserService
@@ -59,8 +64,8 @@ const _dependencies: Readonly<
   [dependencyInjectionTokens.organizationService]: Object.freeze({
     value: OrganizationService
   }),
-  [dependencyInjectionTokens.httpControllerDefinitions]: Object.freeze({
-    value: _httpControllerDefintions
+  [dependencyInjectionTokens.controllerDefinitions]: Object.freeze({
+    value: _controllerDefintions
   }),
   [dependencyInjectionTokens.databaseEntities]: Object.freeze({
     value: _databaseEntities

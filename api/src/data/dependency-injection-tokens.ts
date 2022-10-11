@@ -6,7 +6,7 @@ const organizationService = Symbol('organizationService');
 const databaseContext = Symbol('databaseContext');
 const applicationContext = Symbol('applicationContext');
 const userContext = Symbol('userContext');
-const httpControllerDefinitions = Symbol('httpControllerDefinitions');
+const controllerDefinitions = Symbol('controllerDefinitions');
 const databaseEntities = Symbol('databaseEntities');
 const seedableEntities = Symbol('seedableEntities');
 
@@ -21,5 +21,5 @@ export const dependencyInjectionTokens = Object.freeze({
   seedableEntities,
   databaseEntities,
   applicationContext,
-  httpControllerDefinitions
+  controllerDefinitions
 });

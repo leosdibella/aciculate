@@ -1,21 +1,21 @@
-import { DbEntity } from '@types';
-import { IRoleModel, IDbSeedData } from '@interfaces';
+import { Entity } from '@types';
+import { IRoleModel, ISeedData } from '@interfaces';
 import { BaseEntity } from './base-entity';
 import { Role } from '@shared/enums';
-import { DbColumnType } from '@enums';
+import { EntityName, FieldType } from '@enums';
 import { entity, field } from '@decorators/database';
 
-@entity()
+@entity(EntityName.role)
 export class RoleEntity
   extends BaseEntity<IRoleModel>
-  implements DbEntity<IRoleModel>
+  implements Entity<IRoleModel>
 {
   private static readonly _values: Readonly<Partial<IRoleModel>>[];
 
-  public static seed(): IDbSeedData<IRoleModel> {
+  public static seed(): ISeedData<IRoleModel> {
     return {
-      values: (Object.keys(Role) as Role[]).map((r) => ({ name: r })),
-      conditions: ['name'],
+      values: (Object.keys(Role) as Role[]).map((r) => ({ role: r })),
+      conditions: ['role'],
       storeValues: true
     };
   }
@@ -29,15 +29,15 @@ export class RoleEntity
   }
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512
   })
-  public readonly name?: Role;
+  public readonly role?: Role;
 
   public constructor(model: Partial<IRoleModel>) {
     super(model);
 
-    this.name = model.name;
+    this.role = model.role;
   }
 }

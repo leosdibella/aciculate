@@ -1,4 +1,4 @@
-export enum DbColumnType {
+export enum FieldType {
   boolean = 'boolean',
   timestamptz = 'timestamptz',
   varchar = 'varchar',

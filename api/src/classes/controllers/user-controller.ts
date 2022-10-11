@@ -1,11 +1,11 @@
 import {
   authenticate,
-  httpController,
+  controller,
   requestBody,
   route,
   routeParameter
 } from '@decorators';
-import { IUserController } from '@interfaces/controllers';
+import { IUserController } from '@interfaces';
 import { HttpStatusCode, HttpVerb } from '@shared/enums';
 import { Request, Response } from 'express';
 import { IUserContext } from '@interfaces/contexts';
@@ -13,7 +13,7 @@ import { ICreateUserRequest, IUserService } from '@interfaces/services';
 import { inject } from '@shared/decorators';
 import { dependencyInjectionTokens } from '@data';
 
-@httpController(dependencyInjectionTokens.userController)
+@controller(dependencyInjectionTokens.userController)
 export class UserController implements IUserController {
   readonly #userService: IUserService;
 

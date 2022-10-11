@@ -1,4 +1,4 @@
-export * from './http-controller';
+export * from './controller';
 export * from './authenticate';
 export * from './route';
 export * from './request-body';

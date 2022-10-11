@@ -1,6 +1,6 @@
 import {
   ICreateUserRequest,
-  IDbContext,
+  IDatabaseContext,
   IUserModel,
   IUserService
 } from '@interfaces';
@@ -10,7 +10,7 @@ import { inject } from '@shared/decorators';
 import { dependencyInjectionTokens } from 'src/data';
 
 export class UserService implements IUserService {
-  readonly #databaseContext: IDbContext;
+  readonly #databaseContext: IDatabaseContext;
 
   public async get(id: string) {
     return this.#databaseContext.get(new UserEntity({ id }));
@@ -43,7 +43,7 @@ export class UserService implements IUserService {
 
   public constructor(
     @inject(dependencyInjectionTokens.databaseContext)
-    databaseContext: IDbContext
+    databaseContext: IDatabaseContext
   ) {
     this.#databaseContext = databaseContext;
   }

@@ -1,2 +1,2 @@
-export * from './db-functions';
+export * from './database-functions';
 export * from './authentication';

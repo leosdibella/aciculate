@@ -10,9 +10,9 @@ import {
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode, HttpStatusCode, HttpVerb } from '@shared/enums';
 import { registry, toCamelCase } from '@shared/utilities';
-import { ControllerConstructor } from '@types';
 import { decodeJwt } from '@utilities';
 import { Request, Response } from 'express';
+import { Constructor } from '@shared/types';
 
 const _mappedRoutes: Record<string, HttpVerb[]> = {};
 
@@ -81,13 +81,11 @@ function _resolveEndpointParameters<T extends IController>(
   return endpointParameters;
 }
 
-export function httpController<T extends IController>(
+export function controller<T extends IController>(
   metadataKey: symbol,
   routePrefixOverride?: string
 ) {
-  return function httpControllerDecorator<S extends T>(
-    target: ControllerConstructor<S>
-  ) {
+  return function controllerDecorator<S extends T>(target: Constructor<S>) {
     const routePrefix =
       routePrefixOverride ??
       toCamelCase(target.name.split('Controller')[0] ?? '');
@@ -136,7 +134,7 @@ export function httpController<T extends IController>(
                 }
               }
 
-              const controller = registry.create<T>(
+              const httpController = registry.create<T>(
                 metadataKey,
                 Object.freeze({
                   [dependencyInjectionTokens.httpRequest]: Object.freeze({
@@ -151,7 +149,7 @@ export function httpController<T extends IController>(
                 })
               );
 
-              const endpoint = controller[pn];
+              const endpoint = httpController[pn];
 
               if (typeof endpoint === 'function') {
                 const endpointParameters = _resolveEndpointParameters(

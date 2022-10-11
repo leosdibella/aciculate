@@ -1,11 +1,11 @@
-import { DbColumnType } from '@enums';
+import { FieldType } from '@enums';
 
 export interface IField {
-  readonly type: DbColumnType;
-  readonly defaultValue: unknown;
-  readonly maxLength?: never;
-  readonly minLength?: never;
-  readonly isNullable?: never;
+  readonly type: FieldType;
+  readonly defaultValue?: unknown;
+  readonly maxLength?: number;
+  readonly minLength?: number;
+  readonly isNullable?: true;
   readonly isSecured?: true;
   validate?(value: unknown): void;
 }

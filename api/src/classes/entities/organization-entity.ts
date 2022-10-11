@@ -1,41 +1,41 @@
 import { entity, field } from '@decorators/database';
-import { DbColumnType } from '@enums';
-import { IDbSeedData, IOrganizationModel, IUserModel } from '@interfaces';
-import { DbEntity } from '@types';
+import { EntityName, FieldType } from '@enums';
+import { ISeedData, IOrganizationModel, IUserModel } from '@interfaces';
+import { Entity } from '@types';
 import { BaseEntity } from './base-entity';
 
-@entity()
+@entity(EntityName.calendar)
 export class OrganizationEntity
   extends BaseEntity<IOrganizationModel>
-  implements DbEntity<IOrganizationModel>
+  implements Entity<IOrganizationModel>
 {
-  public static seed(): IDbSeedData<IOrganizationModel> {
+  public static seed(): ISeedData<IOrganizationModel> {
     return {
       values: [
         {
-          name: process.env.ACICULATE_SYSTEM_ORGANIZATION,
+          title: process.env.ACICULATE_SYSTEM_ORGANIZATION,
           description: 'This is the administration organization'
         }
       ],
-      conditions: ['name']
+      conditions: ['title']
     };
   }
 
   @field({
-    type: DbColumnType.json,
+    type: FieldType.json,
     isNullable: true
   })
   public readonly data?: Readonly<Record<string, unknown>> | null;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512
   })
-  public readonly name?: string;
+  public readonly title?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     maxLength: 1024,
     isNullable: true
   })
@@ -46,7 +46,7 @@ export class OrganizationEntity
   public constructor(model: Partial<IOrganizationModel>) {
     super(model);
 
-    this.name = model.name;
+    this.title = model.title;
     this.description = model.description;
     this.users = model.users ?? [];
     this.data = model.data;

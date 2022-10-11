@@ -1,24 +1,20 @@
 import { databaseMetadataKeys } from '@data/database-metadata-keys';
 import { IBaseModel } from '@interfaces/models';
 import { Constructor } from '@shared/types';
-import { DbColumn, DbEntity, DbSchema } from '@types';
+import { Field, Entity, EntitySchema } from '@types';
 
 export function field<T extends IBaseModel>(
-  column: DbColumn
+  entityField: Field
 ): PropertyDecorator {
   return function fieldDecorator<S extends T>(
-    target: Constructor<DbEntity<S>>,
+    target: Constructor<Entity<S>>,
     propertyKey: Extract<keyof S, string>
   ) {
-    const columnDictionary: Partial<DbSchema<S>> =
+    const fieldDictionary: Partial<EntitySchema<S>> =
       Reflect.getMetadata(databaseMetadataKeys.field, target) ?? {};
 
-    columnDictionary[propertyKey] = Object.freeze(column);
+    fieldDictionary[propertyKey] = Object.freeze(entityField);
 
-    Reflect.defineMetadata(
-      databaseMetadataKeys.field,
-      columnDictionary,
-      target
-    );
+    Reflect.defineMetadata(databaseMetadataKeys.field, fieldDictionary, target);
   };
 }

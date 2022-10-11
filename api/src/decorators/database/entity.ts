@@ -1,16 +1,13 @@
 import { databaseMetadataKeys } from '@data';
-import { IDbEntity } from '@interfaces/database';
-import { IBaseModel } from '@interfaces/models';
+import { Entity, EntityNameModel } from '@types';
 import { Constructor } from '@shared/types';
+import { EntityName } from '@enums';
 
-export function entity<T extends IBaseModel>(tableName?: string) {
-  return function entityDecorator<S extends T>(
-    target: Constructor<IDbEntity<S>>
-  ) {
-    Reflect.defineMetadata(
-      databaseMetadataKeys.entity,
-      tableName || target.name.split('Entity')[0],
-      target
-    );
+export function entity<
+  T extends EntityName,
+  S extends Constructor<Entity<EntityNameModel<T>>>
+>(entityName: EntityName) {
+  return function entityDecorator(target: S) {
+    Reflect.defineMetadata(databaseMetadataKeys.entity, entityName, target);
   };
 }

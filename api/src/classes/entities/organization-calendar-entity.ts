@@ -1,27 +1,27 @@
 import { entity, field, foreignKey } from '@decorators/database';
-import { DbColumnType, DbTableName } from '@enums';
+import { FieldType, EntityName } from '@enums';
 import { IOrganizationCalendarModel } from '@interfaces/models';
-import { DbEntity } from '@types';
+import { Entity } from '@types';
 import { BaseEntity } from './base-entity';
 
-@entity()
+@entity(EntityName.organizationCalendar)
 export class OrganizationCalendarEntity
   extends BaseEntity<IOrganizationCalendarModel>
-  implements DbEntity<IOrganizationCalendarModel>
+  implements Entity<IOrganizationCalendarModel>
 {
   @field({
-    type: DbColumnType.uuid
+    type: FieldType.uuid
   })
   @foreignKey({
-    tableName: DbTableName.calendar
+    entityName: EntityName.calendar
   })
   public readonly organizationId?: string;
 
   @field({
-    type: DbColumnType.uuid
+    type: FieldType.uuid
   })
   @foreignKey({
-    tableName: DbTableName.calendar
+    entityName: EntityName.calendar
   })
   public readonly calendarId?: string;
 

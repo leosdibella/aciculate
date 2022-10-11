@@ -1,12 +1,12 @@
 import { FieldType } from '@enums';
 import { IField } from './field';
 
-export interface IPrimaryKeyField extends IField {
+export interface IUuidField extends IField {
   readonly type: FieldType.uuid;
-  readonly defaultValue: 'uuid_generate_v4()';
+  readonly defaultValue?: never;
   readonly maxLength?: never;
   readonly minLength?: never;
-  readonly isNullable?: never;
+  readonly isNullable?: true;
   readonly isSecured?: true;
   readonly validate?: never;
 }

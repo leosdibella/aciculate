@@ -1,35 +1,35 @@
 import { Pool } from 'pg';
 import format from 'pg-format';
-import { DbEntity, DbModel, DbSchema, DbTable } from '@types';
+import { Entity, EntityNameModel, EntitySchema, ModelEntityName } from '@types';
 import {
   IBaseModel,
-  IDbContext,
-  IDbEntityConstructor,
-  IDbSeedData,
+  IDatabaseContext,
+  IEntityConstructor,
+  ISeedData,
   IOrganizationModel,
   IRoleModel,
   IUserContext,
   IUserModel
 } from '@interfaces';
 import {
-  generateTableColumnDefinitions,
+  generateColumnDefinitions,
   getColumnNamesAndValues,
   validateColumnValues
 } from '@utilities';
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode, Role } from '@shared/enums';
-import { DbTableName } from '@enums';
+import { EntityName } from '@enums';
 import { inject } from '@shared/decorators';
 import { databaseMetadataKeys, dependencyInjectionTokens } from 'src/data';
 
-export class DbContext implements IDbContext {
-  static readonly #dbPool = new Pool();
+export class DatabaseContext implements IDatabaseContext {
+  static readonly #databasePool = new Pool();
 
-  readonly #pool = DbContext.#dbPool;
+  readonly #pool = DatabaseContext.#databasePool;
 
-  public async get<T extends IBaseModel>(entity: DbEntity<T>) {
+  public async get<T extends IBaseModel>(entity: Entity<T>) {
     const query = format(
-      `SELECT * FROM ${entity.tableName} WHERE id = %L;`,
+      `SELECT * FROM ${entity.name} WHERE id = %L;`,
       entity.id
     );
 
@@ -39,17 +39,17 @@ export class DbContext implements IDbContext {
       throw new ApiError([
         {
           errorCode: ApiErrorCode.databaseLookupError,
-          message: `Record of type ${entity.tableName} with id = '${entity.id}' not found.`
+          message: `Record of type ${entity.name} with id = '${entity.id}' not found.`
         }
       ]);
     }
 
-    return new (entity.constructor as IDbEntityConstructor<T>)(
+    return new (entity.constructor as IEntityConstructor<T>)(
       result.rows[0]
     ).toModel();
   }
 
-  public async insert<T extends IBaseModel>(entity: DbEntity<T>) {
+  public async insert<T extends IBaseModel>(entity: Entity<T>) {
     if (entity.validateInsert) {
       entity.validateInsert();
     } else {
@@ -66,7 +66,7 @@ export class DbContext implements IDbContext {
     }
 
     const query = format(
-      `INSERT INTO ${entity.tableName} (${columnNames.join()}) VALUES %L;`,
+      `INSERT INTO ${entity.name} (${columnNames.join()}) VALUES %L;`,
       columnValues
     );
 
@@ -77,18 +77,18 @@ export class DbContext implements IDbContext {
         {
           errorCode: ApiErrorCode.databaseInsertError,
           message: `Record of type ${
-            entity.tableName
+            entity.name
           } with value '${entity.toJson()}' could not be inserted.`
         }
       ]);
     }
 
-    return new (entity.constructor as IDbEntityConstructor<T>)(
+    return new (entity.constructor as IEntityConstructor<T>)(
       result.rows[0] as T
     ).toModel();
   }
 
-  public async update<T extends IBaseModel>(entity: DbEntity<T>) {
+  public async update<T extends IBaseModel>(entity: Entity<T>) {
     const oldModel = await this.get(entity);
 
     if (entity.validateUpdate) {
@@ -109,7 +109,7 @@ export class DbContext implements IDbContext {
       .join();
 
     const query = format(
-      `UPDATE ${entity.tableName} SET %s WHERE id = %L;`,
+      `UPDATE ${entity.name} SET %s WHERE id = %L;`,
       setters,
       entity.id
     );
@@ -121,7 +121,7 @@ export class DbContext implements IDbContext {
         {
           errorCode: ApiErrorCode.databaseInsertError,
           message: `Record of type ${
-            entity.tableName
+            entity.name
           } with value '${entity.toJson()}' could not be updated.`
         }
       ]);
@@ -136,9 +136,9 @@ export class DbContext implements IDbContext {
     return newModel;
   }
 
-  public async hardDelete<T extends IBaseModel>(entity: DbEntity<T>) {
+  public async hardDelete<T extends IBaseModel>(entity: Entity<T>) {
     const query = format(
-      `DELETE FROM ${entity.tableName} WHERE id = %L;`,
+      `DELETE FROM ${entity.name} WHERE id = %L;`,
       entity.id
     );
 
@@ -148,7 +148,7 @@ export class DbContext implements IDbContext {
       throw new ApiError([
         {
           errorCode: ApiErrorCode.databaseDeleteError,
-          message: `Record of type ${entity.tableName} with id = '${entity.id}' was not deleted.`
+          message: `Record of type ${entity.name} with id = '${entity.id}' was not deleted.`
         }
       ]);
     }
@@ -157,16 +157,13 @@ export class DbContext implements IDbContext {
   }
 
   public async migrateSchema<T extends IBaseModel>(
-    tableName: DbTable<T>,
-    schema: DbSchema<T>
+    entityName: ModelEntityName<T>,
+    schema: EntitySchema<T>
   ) {
-    const { columns, indexes } = generateTableColumnDefinitions(
-      tableName,
-      schema
-    );
+    const { columns, indexes } = generateColumnDefinitions(entityName, schema);
 
     await this.#pool.query(
-      `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(',\n')});`
+      `CREATE TABLE IF NOT EXISTS ${entityName} (${columns.join(',\n')});`
     );
 
     for (let i = 0; i < indexes.length; ++i) {
@@ -177,8 +174,8 @@ export class DbContext implements IDbContext {
   }
 
   public async seed<T extends IBaseModel>(
-    tableName: DbTableName,
-    EntityConstructor: IDbEntityConstructor<T>
+    entityName: EntityName,
+    EntityConstructor: IEntityConstructor<T>
   ) {
     if (!EntityConstructor.seed) {
       return;
@@ -188,7 +185,7 @@ export class DbContext implements IDbContext {
       EntityConstructor.seed.constructor.name === 'AsyncFunction'
         ? await EntityConstructor.seed()
         : EntityConstructor.seed()
-    ) as IDbSeedData<T>;
+    ) as ISeedData<T>;
 
     const values: T[] = [];
 
@@ -197,7 +194,7 @@ export class DbContext implements IDbContext {
         .map((c, j) => format('%s = %L', c, seedData.values[j][c]))
         .join(' AND ');
 
-      const query = format(`SELECT * FROM ${tableName} WHERE %s;`, conditions);
+      const query = format(`SELECT * FROM ${entityName} WHERE %s;`, conditions);
       const result = await this.#pool.query(query);
 
       if (result.rows.length > 0) {
@@ -221,36 +218,39 @@ export class DbContext implements IDbContext {
     let user: IUserModel | undefined;
     let role: IRoleModel | undefined;
 
-    (Object.keys(this._databaseEntities) as DbTableName[]).forEach((t) => {
-      const schema: DbSchema<DbModel<typeof t>> = Reflect.getMetadata(
-        databaseMetadataKeys.field,
-        this._databaseEntities[t].prototype
-      );
+    (Object.keys(this._databaseEntities) as EntityName[]).forEach((t) => {
+      const schema: EntitySchema<EntityNameModel<typeof t>> =
+        Reflect.getMetadata(
+          databaseMetadataKeys.field,
+          this._databaseEntities[t].prototype
+        );
 
-      this.migrateSchema<DbModel<typeof t>>(t, schema);
+      this.migrateSchema<EntityNameModel<typeof t>>(t, schema);
     });
 
     for (let i = 0; i < this._seedableEntities.length; ++i) {
-      const tableName = this._seedableEntities[i];
-      const seedableConstructor = this._databaseEntities[tableName];
+      const entityName = this._seedableEntities[i];
+      const seedableConstructor = this._databaseEntities[entityName];
 
-      const values = await this.seed<DbModel<typeof tableName>>(
-        tableName,
-        seedableConstructor as IDbEntityConstructor<DbModel<typeof tableName>>
+      const values = await this.seed<EntityNameModel<typeof entityName>>(
+        entityName,
+        seedableConstructor as IEntityConstructor<
+          EntityNameModel<typeof entityName>
+        >
       );
 
-      switch (tableName) {
-        case DbTableName.role:
+      switch (entityName) {
+        case EntityName.role:
           role = (values as IRoleModel[] | undefined)?.find(
-            (r) => r.name === Role.superAdmin
+            (r) => r.role === Role.superAdmin
           );
 
           break;
-        case DbTableName.user:
+        case EntityName.user:
           user = (values as IUserModel[] | undefined)?.[0];
 
           break;
-        case DbTableName.organization:
+        case EntityName.organization:
           organization = (values as IOrganizationModel[] | undefined)?.[0];
 
           break;
@@ -261,7 +261,7 @@ export class DbContext implements IDbContext {
 
     if (user && role && organization) {
       const organizationUserRoleEntity =
-        this._databaseEntities[DbTableName.organizationUserRole];
+        this._databaseEntities[EntityName.organizationUserRole];
 
       // eslint-disable-next-line new-cap
       const organizationUserRole = new organizationUserRoleEntity({
@@ -279,10 +279,10 @@ export class DbContext implements IDbContext {
   public constructor(
     @inject(dependencyInjectionTokens.databaseEntities)
     private readonly _databaseEntities: Readonly<{
-      [key in DbTableName]: IDbEntityConstructor<DbModel<key>>;
+      [key in EntityName]: IEntityConstructor<EntityNameModel<key>>;
     }>,
     @inject(dependencyInjectionTokens.seedableEntities)
-    private readonly _seedableEntities: Readonly<DbTableName[]>,
+    private readonly _seedableEntities: Readonly<EntityName[]>,
     @inject(dependencyInjectionTokens.userContext)
     private readonly _userContext: Readonly<IUserContext> | null | undefined
   ) {}

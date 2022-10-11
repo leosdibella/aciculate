@@ -1,21 +1,21 @@
-import { DbColumnType } from '@enums';
-import { DbEntity } from '@types';
+import { EntityName, FieldType } from '@enums';
+import { Entity } from '@types';
 import { generateHash, generateSalt } from '@utilities';
 import {
   ICalendarModel,
-  IDbSeedData,
+  ISeedData,
   IOrganizationModel,
   IUserModel
 } from '@interfaces';
 import { BaseEntity } from './base-entity';
 import { entity, field, userImmutable } from '@decorators';
 
-@entity()
+@entity(EntityName.user)
 export class UserEntity
   extends BaseEntity<IUserModel>
-  implements DbEntity<IUserModel>
+  implements Entity<IUserModel>
 {
-  public static async seed(): Promise<IDbSeedData<IUserModel>> {
+  public static async seed(): Promise<ISeedData<IUserModel>> {
     const salt = generateSalt();
 
     return {
@@ -41,28 +41,28 @@ export class UserEntity
   private readonly _calendars: Readonly<Readonly<ICalendarModel>[]> = [];
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512
   })
   public firstName?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512
   })
   public lastName?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512
   })
   public email?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 1024,
     isSecured: true
@@ -71,7 +71,7 @@ export class UserEntity
   public passwordHash?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 1024,
     isSecured: true

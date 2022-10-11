@@ -1,62 +1,62 @@
 import { TimeInterval } from '@shared/enums';
 import { validateTimeInterval, validateTimeZone } from '@shared/utilities';
-import { DbTableName, DbColumnType } from '@enums';
-import { DbEntity } from '@types';
+import { EntityName, FieldType } from '@enums';
+import { Entity } from '@types';
 import { ICalendarEventModel } from '@interfaces';
 import { BaseEntity } from './base-entity';
 import { entity, field, foreignKey } from '@decorators/database';
 
-@entity()
+@entity(EntityName.calendarEvent)
 export class CalendarEventEntity
   extends BaseEntity<ICalendarEventModel>
-  implements DbEntity<ICalendarEventModel>
+  implements Entity<ICalendarEventModel>
 {
   protected readonly _startDate?: Date;
   protected readonly _endDate?: Date | null;
 
   @field({
-    type: DbColumnType.json,
+    type: FieldType.json,
     isNullable: true
   })
   public readonly data?: Readonly<Record<string, unknown>> | null;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512
   })
   public readonly title?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     maxLength: 1024,
     isNullable: true
   })
   public readonly description?: string | null;
 
   @field({
-    type: DbColumnType.boolean
+    type: FieldType.boolean
   })
   public readonly isPrivate?: boolean;
 
   @field({
-    type: DbColumnType.boolean
+    type: FieldType.boolean
   })
   public readonly isAllDay?: boolean;
 
   @field({
-    type: DbColumnType.smallint
+    type: FieldType.smallint
   })
   public readonly startTime?: number;
 
   @field({
-    type: DbColumnType.smallint,
+    type: FieldType.smallint,
     isNullable: true
   })
   public readonly endTime?: number | null;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512,
     validate: validateTimeZone
@@ -64,7 +64,7 @@ export class CalendarEventEntity
   public readonly startTimeZone?: string;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 512,
     isNullable: true,
@@ -73,13 +73,13 @@ export class CalendarEventEntity
   public readonly endTimeZone?: string | null;
 
   @field({
-    type: DbColumnType.smallint,
+    type: FieldType.smallint,
     isNullable: true
   })
   public readonly numberOfOccurences?: number | null;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 7,
     isNullable: true
@@ -87,7 +87,7 @@ export class CalendarEventEntity
   public readonly repeatOn?: string | null;
 
   @field({
-    type: DbColumnType.varchar,
+    type: FieldType.varchar,
     minLength: 1,
     maxLength: 7,
     isNullable: true,
@@ -96,28 +96,28 @@ export class CalendarEventEntity
   public readonly timeInterval?: TimeInterval | null;
 
   @field({
-    type: DbColumnType.smallint,
+    type: FieldType.smallint,
     isNullable: true
   })
   public readonly timeIntervalDuration?: number | null;
 
   @field({
-    type: DbColumnType.uuid
+    type: FieldType.uuid
   })
   @foreignKey({
-    tableName: DbTableName.calendar
+    entityName: EntityName.calendar
   })
   public readonly calendarId?: string;
 
   @field({
-    type: DbColumnType.date
+    type: FieldType.date
   })
   public get startDate() {
     return this._startDate ? new Date(this._startDate) : this._startDate;
   }
 
   @field({
-    type: DbColumnType.date,
+    type: FieldType.date,
     isNullable: true
   })
   public get endDate() {

@@ -1,4 +1,4 @@
-import { DbTableName } from '@enums';
+import { EntityName } from '@enums';
 import {
   IBaseModel,
   ICalendarEventModel,
@@ -10,18 +10,18 @@ import {
   IOrganizationUserRoleModel
 } from '@interfaces';
 
-export type DbTable<T extends IBaseModel> = T extends IUserModel
-  ? DbTableName.user
+export type ModelEntityName<T extends IBaseModel> = T extends IUserModel
+  ? EntityName.user
   : T extends IOrganizationModel
-  ? DbTableName.organization
+  ? EntityName.organization
   : T extends IRoleModel
-  ? DbTableName.role
+  ? EntityName.role
   : T extends ICalendarModel
-  ? DbTableName.calendar
+  ? EntityName.calendar
   : T extends ICalendarEventModel
-  ? DbTableName.calendarEvent
+  ? EntityName.calendarEvent
   : T extends IOrganizationCalendarModel
-  ? DbTableName.organizationCalendar
+  ? EntityName.organizationCalendar
   : T extends IOrganizationUserRoleModel
-  ? DbTableName.organizationUserRole
+  ? EntityName.organizationUserRole
   : never;

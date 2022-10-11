@@ -25,7 +25,7 @@ export function authenticate<T extends IController>(
         (r) => r.id === target.userContext!.roleId
       );
 
-      if (!role || roles.indexOf(role.name!) === -1) {
+      if (!role || roles.indexOf(role.role!) === -1) {
         target.response.status(HttpStatusCode.forbidden).send({
           errorCode: ApiErrorCode.insufficientPermissionsError,
           message: `A role belonging to the set [${roles.join()}] is required to perform this operation.`

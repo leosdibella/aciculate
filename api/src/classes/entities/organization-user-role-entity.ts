@@ -1,35 +1,35 @@
-import { DbEntity } from '@types';
+import { Entity } from '@types';
 import { BaseEntity } from './base-entity';
-import { DbTableName, DbColumnType } from '@enums';
+import { EntityName, FieldType } from '@enums';
 import { IOrganizationUserRoleModel } from '@interfaces';
 import { entity, field, foreignKey } from '@decorators/database';
 
-@entity()
+@entity(EntityName.organizationUserRole)
 export class OrganizationUserRoleEntity
   extends BaseEntity<IOrganizationUserRoleModel>
-  implements DbEntity<IOrganizationUserRoleModel>
+  implements Entity<IOrganizationUserRoleModel>
 {
   @field({
-    type: DbColumnType.uuid
+    type: FieldType.uuid
   })
   @foreignKey({
-    tableName: DbTableName.organization
+    entityName: EntityName.organization
   })
   public readonly organizationId?: string;
 
   @field({
-    type: DbColumnType.uuid
+    type: FieldType.uuid
   })
   @foreignKey({
-    tableName: DbTableName.user
+    entityName: EntityName.user
   })
   public readonly userId?: string;
 
   @field({
-    type: DbColumnType.uuid
+    type: FieldType.uuid
   })
   @foreignKey({
-    tableName: DbTableName.role
+    entityName: EntityName.role
   })
   public readonly roleId?: string;
 

@@ -1,9 +1,9 @@
 import { databaseMetadataKeys } from '@data';
 import { IBaseModel } from '@interfaces';
-import { DbEntity } from '@types';
+import { Entity } from '@types';
 
 export function userImmutable<T extends IBaseModel>(
-  target: DbEntity<T>,
+  target: Entity<T>,
   propertyKey: Extract<keyof T, string>
 ) {
   const userImmutableDictionary: Extract<keyof T, string>[] =
