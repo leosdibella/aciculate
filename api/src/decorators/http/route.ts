@@ -15,7 +15,7 @@ export function route<T extends IController>(
       Record<Extract<keyof T, string>, Readonly<IRouteMetdata>>
     > = Reflect.getMetadata(httpMetadataKeys.route, target) ?? {};
 
-    routeDictionary[propertyKey] = Object.freeze({
+    routeDictionary[propertyKey] = Object.freeze<IRouteMetdata>({
       httpVerb,
       path
     });

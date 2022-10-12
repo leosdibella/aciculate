@@ -13,6 +13,8 @@ import { registry, toCamelCase } from '@shared/utilities';
 import { decodeJwt } from '@utilities';
 import { Request, Response } from 'express';
 import { Constructor } from '@shared/types';
+import { ControllerName } from '@enums';
+import { Controller } from '@types';
 
 const _mappedRoutes: Record<string, HttpVerb[]> = {};
 
@@ -81,27 +83,32 @@ function _resolveEndpointParameters<T extends IController>(
   return endpointParameters;
 }
 
-export function controller<T extends IController>(
-  metadataKey: symbol,
+export function controller<T extends ControllerName>(
+  controllerName: T,
   routePrefixOverride?: string
 ) {
-  return function controllerDecorator<S extends T>(target: Constructor<S>) {
+  return function controllerDecorator<S extends Constructor<Controller<T>>>(
+    target: S
+  ) {
     const routePrefix =
       routePrefixOverride ??
       toCamelCase(target.name.split('Controller')[0] ?? '');
 
-    const routes: Readonly<IControllerRoute<T>>[] = [];
+    const routes: Readonly<IControllerRoute<Controller<T>>>[] = [];
 
     Object.getOwnPropertyNames(target.prototype).forEach(
-      (pn: Extract<keyof T, string>) => {
-        const property = target.prototype[pn];
+      (actionName: Extract<keyof Controller<T>, string>) => {
+        const property = target.prototype[actionName];
 
         if (typeof property === 'function') {
           const routeDictionary: Partial<
-            Record<Extract<keyof T, string>, Readonly<IRouteMetdata>>
+            Record<
+              Extract<keyof Controller<T>, string>,
+              Readonly<IRouteMetdata>
+            >
           > = Reflect.getMetadata(httpMetadataKeys.route, target) ?? {};
 
-          const route = routeDictionary[pn];
+          const route = routeDictionary[actionName];
 
           if (route) {
             const path = routePrefix + route.path;
@@ -134,8 +141,10 @@ export function controller<T extends IController>(
                 }
               }
 
-              const httpController = registry.create<T>(
-                metadataKey,
+              const controllerToken = dependencyInjectionTokens[controllerName];
+
+              const httpController = registry.create<Controller<T>>(
+                controllerToken,
                 Object.freeze({
                   [dependencyInjectionTokens.httpRequest]: Object.freeze({
                     value: request
@@ -149,7 +158,7 @@ export function controller<T extends IController>(
                 })
               );
 
-              const endpoint = httpController[pn];
+              const endpoint = httpController[actionName];
 
               if (typeof endpoint === 'function') {
                 const endpointParameters = _resolveEndpointParameters(
@@ -167,11 +176,10 @@ export function controller<T extends IController>(
             };
 
             routes.push(
-              Object.freeze({
-                httpVerb: route.httpVerb,
-                route: route.path,
+              Object.freeze<IControllerRoute<Controller<T>>>({
+                ...route,
                 action,
-                actionName: pn
+                actionName
               })
             );
           }
@@ -183,7 +191,7 @@ export function controller<T extends IController>(
 
     Reflect.defineMetadata(
       httpMetadataKeys.routes,
-      Object.freeze(routes),
+      Object.freeze<IControllerRoute<Controller<T>>[]>(routes),
       target
     );
 

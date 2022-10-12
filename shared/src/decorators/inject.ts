@@ -12,7 +12,7 @@ export function inject(token: symbol): ParameterDecorator {
       Reflect.getMetadata(injectMetadataKey, target) || [];
 
     injections.push(
-      Object.freeze({
+      Object.freeze<IInjection>({
         token,
         propertyKey,
         parameterIndex

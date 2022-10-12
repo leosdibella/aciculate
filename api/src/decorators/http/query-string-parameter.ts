@@ -23,7 +23,7 @@ export function queryStringParameter<T extends IController>(
     }
 
     queryStringParametersDictionary[propertyKey]!.push(
-      Object.freeze({
+      Object.freeze<IQueryStringParameterMetadata>({
         parameterIndex,
         name,
         valueCoercer

@@ -19,7 +19,7 @@ export function routeParameter<T extends IController>(
     }
 
     routeParametersDictionary[propertyKey]!.push(
-      Object.freeze({
+      Object.freeze<IRouteParameterMetadata>({
         parameterIndex,
         name,
         valueCoercer

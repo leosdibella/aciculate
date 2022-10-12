@@ -1,10 +1,6 @@
 import 'reflect-metadata';
 import { exit } from 'process';
-import {
-  IApplicationContext,
-  IController,
-  IEntityConstructor
-} from '@interfaces';
+import { IApplicationContext } from '@interfaces';
 import {
   DatabaseContext,
   ApplicationContext,
@@ -14,68 +10,88 @@ import {
   CalendarEventEntity,
   OrganizationCalendarEntity,
   OrganizationUserRoleEntity,
-  OrganizationEntity
+  OrganizationEntity,
+  HttpContext
 } from '@classes';
 import { registry } from '@shared/utilities';
 import { IRegistryValue } from '@shared/interfaces';
-import { UserController } from '@classes/controllers';
+import { OrganizationController, UserController } from '@classes/controllers';
 import { OrganizationService, UserService } from '@classes/services';
 import { dependencyInjectionTokens } from '@data';
-import { EntityName } from '@enums';
-import { EntityNameModel } from '@types';
-import { Constructor } from '@shared/types';
+import {
+  ApplicationDependency,
+  ContextName,
+  ControllerName,
+  DatabaseDependency,
+  EntityName,
+  ServiceName
+} from '@enums';
+import {
+  DependencyInjectionTokenKey,
+  DependencyInjectionTokenKeyValue
+} from '@types';
 
-const _databaseEntities: Readonly<{
-  [key in EntityName]: IEntityConstructor<EntityNameModel<key>>;
-}> = Object.freeze({
-  [EntityName.user]: UserEntity,
-  [EntityName.role]: RoleEntity,
-  [EntityName.calendar]: CalendarEntity,
-  [EntityName.organization]: OrganizationEntity,
-  [EntityName.calendarEvent]: CalendarEventEntity,
-  [EntityName.organizationCalendar]: OrganizationCalendarEntity,
-  [EntityName.organizationUserRole]: OrganizationUserRoleEntity
-});
-
-const _seedableEntities: Readonly<EntityName[]> = Object.freeze([
-  EntityName.role,
-  EntityName.user,
-  EntityName.organization
-]);
-
-const _controllerDefintions: Readonly<Constructor<IController>[]> =
-  Object.freeze([UserController]);
-
-const _dependencies: Readonly<
-  Partial<Record<symbol, Readonly<IRegistryValue>>>
-> = Object.freeze({
-  [dependencyInjectionTokens.applicationContext]: Object.freeze({
+const _dependencies = Object.freeze<
+  Partial<{
+    [key in DependencyInjectionTokenKey]: IRegistryValue<
+      DependencyInjectionTokenKeyValue<key>
+    >;
+  }>
+>({
+  [ContextName.applicationContext]: {
     value: ApplicationContext
-  }),
-  [dependencyInjectionTokens.databaseContext]: Object.freeze({
+  },
+  [ContextName.httpContext]: {
+    value: HttpContext
+  },
+  [ContextName.databaseContext]: {
     value: DatabaseContext
-  }),
-  [dependencyInjectionTokens.userService]: Object.freeze({
+  },
+  [ServiceName.userService]: {
     value: UserService
-  }),
-  [dependencyInjectionTokens.userController]: Object.freeze({
-    value: UserController
-  }),
-  [dependencyInjectionTokens.organizationService]: Object.freeze({
+  },
+  [ServiceName.organizationService]: {
     value: OrganizationService
-  }),
-  [dependencyInjectionTokens.controllerDefinitions]: Object.freeze({
-    value: _controllerDefintions
-  }),
-  [dependencyInjectionTokens.databaseEntities]: Object.freeze({
-    value: _databaseEntities
-  }),
-  [dependencyInjectionTokens.seedableEntities]: Object.freeze({
-    value: _seedableEntities
-  })
+  },
+  [ControllerName.userController]: {
+    value: UserController
+  },
+  [ControllerName.organizationController]: {
+    value: OrganizationController
+  },
+  [ApplicationDependency.controllers]: {
+    value: [UserController, OrganizationController]
+  },
+  [DatabaseDependency.databaseEntities]: {
+    value: {
+      [EntityName.user]: UserEntity,
+      [EntityName.role]: RoleEntity,
+      [EntityName.calendar]: CalendarEntity,
+      [EntityName.organization]: OrganizationEntity,
+      [EntityName.calendarEvent]: CalendarEventEntity,
+      [EntityName.organizationCalendar]: OrganizationCalendarEntity,
+      [EntityName.organizationUserRole]: OrganizationUserRoleEntity
+    }
+  },
+  [DatabaseDependency.seedableEntities]: {
+    value: [EntityName.role, EntityName.user, EntityName.organization]
+  }
 });
 
-registry.provideMany(_dependencies);
+const _provisions = (() => {
+  const registryValues: Partial<Record<symbol, Readonly<IRegistryValue>>> = {};
+
+  Object.keys(_dependencies).forEach(
+    (dependencyInjectionTokenKey: DependencyInjectionTokenKey) => {
+      registryValues[dependencyInjectionTokens[dependencyInjectionTokenKey]] =
+        Object.freeze(_dependencies[dependencyInjectionTokenKey]);
+    }
+  );
+
+  return registryValues;
+})();
+
+registry.provideMany(_provisions);
 
 const _applicationContext = registry.create<IApplicationContext>(
   dependencyInjectionTokens.applicationContext

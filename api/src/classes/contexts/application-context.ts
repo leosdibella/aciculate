@@ -32,7 +32,7 @@ export class ApplicationContext implements IApplicationContext {
       Reflect.getMetadata(httpMetadataKeys.routes, controllerConstructor);
 
     controllerRoutes.forEach((r) => {
-      router[r.httpVerb](r.route, r.action);
+      router[r.httpVerb](r.path, r.action);
     });
 
     this.#express.use(routePrefix, router);
@@ -61,7 +61,7 @@ export class ApplicationContext implements IApplicationContext {
   public constructor(
     @inject(dependencyInjectionTokens.databaseContext)
     databaseContext: IDatabaseContext,
-    @inject(dependencyInjectionTokens.controllerDefinitions)
+    @inject(dependencyInjectionTokens.controllers)
     controllers: Readonly<Constructor<IController>[]>
   ) {
     this.#databaseContext = databaseContext;

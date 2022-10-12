@@ -35,11 +35,6 @@ export class UserEntity
     };
   }
 
-  private readonly _organizations: Readonly<Readonly<IOrganizationModel[]>> =
-    [];
-
-  private readonly _calendars: Readonly<Readonly<ICalendarModel>[]> = [];
-
   @field({
     type: FieldType.varchar,
     minLength: 1,
@@ -79,13 +74,8 @@ export class UserEntity
   @userImmutable
   public passwordSalt?: string;
 
-  public get calendars() {
-    return this._calendars;
-  }
-
-  public get organizations() {
-    return this._organizations;
-  }
+  public readonly organizations: Readonly<Readonly<IOrganizationModel[]>>;
+  public readonly calendars: Readonly<Readonly<ICalendarModel>[]>;
 
   public constructor(model: Partial<IUserModel>) {
     super(model);
@@ -95,5 +85,11 @@ export class UserEntity
     this.email = model.email;
     this.passwordHash = model.passwordHash;
     this.passwordSalt = model.passwordSalt;
+
+    this.organizations =
+      model.organizations ?? Object.freeze<Readonly<IOrganizationModel>>([]);
+
+    this.calendars =
+      model.calendars ?? Object.freeze<Readonly<ICalendarModel>>([]);
   }
 }

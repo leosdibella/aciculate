@@ -4,7 +4,7 @@ import { IController } from './controller';
 
 export interface IControllerRoute<T extends IController> {
   readonly httpVerb: HttpVerb;
-  readonly route: string;
+  readonly path: string;
   action(request: Request, response: Response): Promise<void>;
   readonly actionName: keyof T;
 }

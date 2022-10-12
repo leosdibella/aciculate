@@ -14,7 +14,7 @@ export function foreignKey<T extends IBaseModel>(
       Record<Extract<keyof S, string>, Readonly<IForeignKey>>
     > = Reflect.getMetadata(databaseMetadataKeys.forgienKey, target) ?? {};
 
-    forgienKeyDictionary[proeprtyKey] = Object.freeze({
+    forgienKeyDictionary[proeprtyKey] = Object.freeze<IForeignKey>({
       entityName: definition.entityName,
       fieldName: definition.fieldName || 'id',
       cascadeOnDelete: definition.cascadeOnDelete

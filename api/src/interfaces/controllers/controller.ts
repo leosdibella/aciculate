@@ -1,8 +1,6 @@
-import { IUserContext } from '../contexts';
-import { Request, Response } from 'express';
+import { IHttpContext, IUserContext } from '../contexts';
 
 export interface IController {
   readonly userContext: Readonly<IUserContext> | undefined | null;
-  readonly request: Request;
-  readonly response: Response;
+  readonly httpContext: Readonly<IHttpContext>;
 }

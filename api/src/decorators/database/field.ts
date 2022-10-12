@@ -13,7 +13,7 @@ export function field<T extends IBaseModel>(
     const fieldDictionary: Partial<EntitySchema<S>> =
       Reflect.getMetadata(databaseMetadataKeys.field, target) ?? {};
 
-    fieldDictionary[propertyKey] = Object.freeze(entityField);
+    fieldDictionary[propertyKey] = Object.freeze<Field>(entityField);
 
     Reflect.defineMetadata(databaseMetadataKeys.field, fieldDictionary, target);
   };

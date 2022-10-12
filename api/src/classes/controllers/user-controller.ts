@@ -7,13 +7,13 @@ import {
 } from '@decorators';
 import { IUserController } from '@interfaces';
 import { HttpStatusCode, HttpVerb } from '@shared/enums';
-import { Request, Response } from 'express';
-import { IUserContext } from '@interfaces/contexts';
+import { IHttpContext, IUserContext } from '@interfaces/contexts';
 import { ICreateUserRequest, IUserService } from '@interfaces/services';
 import { inject } from '@shared/decorators';
 import { dependencyInjectionTokens } from '@data';
+import { ControllerName } from '@enums/http';
 
-@controller(dependencyInjectionTokens.userController)
+@controller(ControllerName.userController)
 export class UserController implements IUserController {
   readonly #userService: IUserService;
 
@@ -42,10 +42,8 @@ export class UserController implements IUserController {
   }
 
   public constructor(
-    @inject(dependencyInjectionTokens.httpRequest)
-    public readonly request: Request,
-    @inject(dependencyInjectionTokens.httpResponse)
-    public readonly response: Response,
+    @inject(dependencyInjectionTokens.httpContext)
+    public readonly httpContext: IHttpContext,
     @inject(dependencyInjectionTokens.userContext)
     public readonly userContext: Readonly<IUserContext> | undefined | null,
     @inject(dependencyInjectionTokens.userService)

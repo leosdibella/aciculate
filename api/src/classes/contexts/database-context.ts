@@ -26,6 +26,12 @@ export class DatabaseContext implements IDatabaseContext {
   static readonly #databasePool = new Pool();
 
   readonly #pool = DatabaseContext.#databasePool;
+  readonly #seedableEntities: Readonly<EntityName[]>;
+  readonly #userContext: Readonly<IUserContext> | null | undefined;
+
+  readonly #databaseEntities: Readonly<{
+    [key in EntityName]: IEntityConstructor<EntityNameModel<key>>;
+  }>;
 
   public async get<T extends IBaseModel>(entity: Entity<T>) {
     const query = format(
@@ -58,11 +64,11 @@ export class DatabaseContext implements IDatabaseContext {
 
     const { columnNames, columnValues } = getColumnNamesAndValues(entity);
 
-    if (this._userContext) {
+    if (this.#userContext) {
       columnNames.push('createdBy' as Extract<keyof T, string>);
       columnNames.push('updatedBy' as Extract<keyof T, string>);
-      columnValues.push(this._userContext.userId);
-      columnValues.push(this._userContext.userId);
+      columnValues.push(this.#userContext.userId);
+      columnValues.push(this.#userContext.userId);
     }
 
     const query = format(
@@ -102,7 +108,7 @@ export class DatabaseContext implements IDatabaseContext {
     columnNames.push('updatedDate' as Extract<keyof T, string>);
     columnValues.push(new Date());
     columnNames.push('updatedBy' as Extract<keyof T, string>);
-    columnValues.push(this._userContext?.userId ?? null);
+    columnValues.push(this.#userContext?.userId ?? null);
 
     const setters = columnNames
       .map((cn, i) => format('%s = %L', cn, columnValues[i]))
@@ -205,8 +211,8 @@ export class DatabaseContext implements IDatabaseContext {
     }
 
     if (seedData.storeValues && EntityConstructor.values !== undefined) {
-      EntityConstructor.values = Object.freeze(
-        values.map((v) => Object.freeze(v))
+      EntityConstructor.values = Object.freeze<Readonly<T>[]>(
+        values.map((v) => Object.freeze<T>(v))
       );
     }
 
@@ -218,19 +224,19 @@ export class DatabaseContext implements IDatabaseContext {
     let user: IUserModel | undefined;
     let role: IRoleModel | undefined;
 
-    (Object.keys(this._databaseEntities) as EntityName[]).forEach((t) => {
+    (Object.keys(this.#databaseEntities) as EntityName[]).forEach((t) => {
       const schema: EntitySchema<EntityNameModel<typeof t>> =
         Reflect.getMetadata(
           databaseMetadataKeys.field,
-          this._databaseEntities[t].prototype
+          this.#databaseEntities[t].prototype
         );
 
       this.migrateSchema<EntityNameModel<typeof t>>(t, schema);
     });
 
-    for (let i = 0; i < this._seedableEntities.length; ++i) {
-      const entityName = this._seedableEntities[i];
-      const seedableConstructor = this._databaseEntities[entityName];
+    for (let i = 0; i < this.#seedableEntities.length; ++i) {
+      const entityName = this.#seedableEntities[i];
+      const seedableConstructor = this.#databaseEntities[entityName];
 
       const values = await this.seed<EntityNameModel<typeof entityName>>(
         entityName,
@@ -261,7 +267,7 @@ export class DatabaseContext implements IDatabaseContext {
 
     if (user && role && organization) {
       const organizationUserRoleEntity =
-        this._databaseEntities[EntityName.organizationUserRole];
+        this.#databaseEntities[EntityName.organizationUserRole];
 
       // eslint-disable-next-line new-cap
       const organizationUserRole = new organizationUserRoleEntity({
@@ -278,12 +284,16 @@ export class DatabaseContext implements IDatabaseContext {
 
   public constructor(
     @inject(dependencyInjectionTokens.databaseEntities)
-    private readonly _databaseEntities: Readonly<{
+    databaseEntities: Readonly<{
       [key in EntityName]: IEntityConstructor<EntityNameModel<key>>;
     }>,
     @inject(dependencyInjectionTokens.seedableEntities)
-    private readonly _seedableEntities: Readonly<EntityName[]>,
+    seedableEntities: Readonly<EntityName[]>,
     @inject(dependencyInjectionTokens.userContext)
-    private readonly _userContext: Readonly<IUserContext> | null | undefined
-  ) {}
+    userContext: Readonly<IUserContext> | null | undefined
+  ) {
+    this.#databaseEntities = databaseEntities;
+    this.#seedableEntities = seedableEntities;
+    this.#userContext = userContext;
+  }
 }

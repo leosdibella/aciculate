@@ -14,6 +14,8 @@ export class ApiError extends Error {
   public constructor(_apiErrors: Readonly<IApiError>[]) {
     super(JSON.stringify(_apiErrors));
 
-    this.#apiErrors = Object.freeze(_apiErrors.map((ae) => Object.freeze(ae)));
+    this.#apiErrors = Object.freeze<IApiError[]>(
+      _apiErrors.map((ae) => Object.freeze(ae))
+    );
   }
 }

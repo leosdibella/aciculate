@@ -13,7 +13,7 @@ export function requestBody<T extends IController>(
       Record<Extract<keyof T, string>, Readonly<IRequestBodyMetadata>>
     > = Reflect.getMetadata(httpMetadataKeys.requestBody, target) || {};
 
-    requestBodyDictionary[propertyKey] = Object.freeze({
+    requestBodyDictionary[propertyKey] = Object.freeze<IRequestBodyMetadata>({
       parameterIndex,
       validator
     });

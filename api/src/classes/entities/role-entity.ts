@@ -10,7 +10,7 @@ export class RoleEntity
   extends BaseEntity<IRoleModel>
   implements Entity<IRoleModel>
 {
-  private static readonly _values: Readonly<Partial<IRoleModel>>[];
+  static values: Readonly<Readonly<Partial<IRoleModel>>[]> = [];
 
   public static seed(): ISeedData<IRoleModel> {
     return {
@@ -18,14 +18,6 @@ export class RoleEntity
       conditions: ['role'],
       storeValues: true
     };
-  }
-
-  public static set values(values: Readonly<Readonly<Partial<IRoleModel>>[]>) {
-    values.forEach((v) => RoleEntity._values.push(v));
-  }
-
-  public static get values(): Readonly<Readonly<Partial<IRoleModel>>[]> {
-    return Object.freeze([...RoleEntity._values]);
   }
 
   @field({

@@ -64,8 +64,10 @@ export class CalendarEntity
     this.data = model.data;
     this.title = model.title;
     this.description = model.description;
-    this.calendarEvents = model.calendarEvents ?? Object.freeze([]);
     this.organization = model.organization;
     this.user = model.user;
+
+    this.calendarEvents =
+      model.calendarEvents ?? Object.freeze<Readonly<ICalendarEventModel>>([]);
   }
 }
