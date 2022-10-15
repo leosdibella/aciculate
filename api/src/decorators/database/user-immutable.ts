@@ -2,10 +2,10 @@ import { databaseMetadataKeys } from '@data';
 import { IBaseModel } from '@interfaces';
 import { Entity } from '@types';
 
-export function userImmutable<T extends IBaseModel>(
+export const userImmutable: PropertyDecorator = <T extends IBaseModel>(
   target: Entity<T>,
   propertyKey: Extract<keyof T, string>
-) {
+) => {
   const userImmutableDictionary: Extract<keyof T, string>[] =
     Reflect.getMetadata(databaseMetadataKeys.userImmutable, target) ?? [];
 
@@ -16,4 +16,4 @@ export function userImmutable<T extends IBaseModel>(
     userImmutableDictionary,
     target
   );
-}
+};

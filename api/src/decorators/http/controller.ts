@@ -96,18 +96,15 @@ export function controller<T extends ControllerName>(
 
     const routes: Readonly<IControllerRoute<Controller<T>>>[] = [];
 
-    Object.getOwnPropertyNames(target.prototype).forEach(
+    const routeDictionary: Partial<
+      Record<Extract<keyof Controller<T>, string>, Readonly<IRouteMetdata>>
+    > = Reflect.getMetadata(httpMetadataKeys.route, target) ?? {};
+
+    Object.keys(routeDictionary).forEach(
       (actionName: Extract<keyof Controller<T>, string>) => {
         const property = target.prototype[actionName];
 
         if (typeof property === 'function') {
-          const routeDictionary: Partial<
-            Record<
-              Extract<keyof Controller<T>, string>,
-              Readonly<IRouteMetdata>
-            >
-          > = Reflect.getMetadata(httpMetadataKeys.route, target) ?? {};
-
           const route = routeDictionary[actionName];
 
           if (route) {
@@ -143,7 +140,7 @@ export function controller<T extends ControllerName>(
 
               const controllerToken = dependencyInjectionTokens[controllerName];
 
-              const httpController = registry.create<Controller<T>>(
+              const httpController = registry.construct<Controller<T>>(
                 controllerToken,
                 Object.freeze({
                   [dependencyInjectionTokens.httpRequest]: Object.freeze({

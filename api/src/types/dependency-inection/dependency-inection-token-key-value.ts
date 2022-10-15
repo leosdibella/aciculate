@@ -22,7 +22,7 @@ import { Constructor } from '@shared/types';
 import { EntityNameModel } from '../database';
 import { DependencyInjectionTokenKey } from './dependency-injection-token-key';
 
-export type DependencyInjectionTokenKeyValue<
+export type DependencyInjectionTokenValue<
   T extends DependencyInjectionTokenKey
 > = T extends ControllerName.userController
   ? Constructor<IUserController>

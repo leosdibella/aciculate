@@ -1,5 +1,10 @@
-import { IBaseModel, ISmallIntegerField, IStringField } from '@interfaces';
-import { Field, Entity, EntitySchema } from '@types';
+import {
+  IBaseModel,
+  IForeignKey,
+  ISmallIntegerField,
+  IStringField
+} from '@interfaces';
+import { Field, Entity } from '@types';
 import { EntityName, FieldType } from '@enums';
 import {
   dateToIsoString,
@@ -9,9 +14,8 @@ import {
 import { IApiError } from '@shared/interfaces';
 import { ApiErrorCode } from '@shared/enums';
 import { ApiError } from '@shared/classes';
-import { BaseEntity } from '@classes';
 
-function getSchemaValidationError<T extends IBaseModel>(
+function _getSchemaValidationError<T extends IBaseModel>(
   entityName: EntityName,
   fieldName: Extract<keyof T, string>,
   fieldValue: string | undefined | null,
@@ -29,10 +33,10 @@ function getSchemaValidationError<T extends IBaseModel>(
   };
 }
 
-function getSchemaConfigurationError<T extends IBaseModel>(
+function _getSchemaConfigurationError<T extends IBaseModel>(
   entityName: EntityName,
   fieldName: Extract<keyof T, string>,
-  field: Field,
+  field: Readonly<Field>,
   remainingText: string
 ) {
   return {
@@ -41,10 +45,10 @@ function getSchemaConfigurationError<T extends IBaseModel>(
   };
 }
 
-function validateIntegerFieldValue<T extends IBaseModel>(
+function _validateIntegerFieldValue<T extends IBaseModel>(
   entityName: EntityName,
   fieldName: Extract<keyof T, string>,
-  field: ISmallIntegerField,
+  field: Readonly<ISmallIntegerField>,
   fieldValue: number | undefined | null,
   id?: string
 ) {
@@ -57,7 +61,7 @@ function validateIntegerFieldValue<T extends IBaseModel>(
   }
 
   return errorMessages.map((errorMessage) =>
-    getSchemaValidationError(
+    _getSchemaValidationError(
       entityName,
       fieldName,
       `${fieldValue}`,
@@ -68,10 +72,10 @@ function validateIntegerFieldValue<T extends IBaseModel>(
   );
 }
 
-function validateStringFieldValue<T extends IBaseModel>(
+function _validateStringFieldValue<T extends IBaseModel>(
   entityName: EntityName,
   fieldName: Extract<keyof T, string>,
-  field: IStringField,
+  field: Readonly<IStringField>,
   fieldValue: string | undefined | null,
   id?: string
 ) {
@@ -101,7 +105,7 @@ function validateStringFieldValue<T extends IBaseModel>(
   }
 
   return errorMessages.map((errorMessage) =>
-    getSchemaValidationError(
+    _getSchemaValidationError(
       entityName,
       fieldName,
       fieldValue,
@@ -120,7 +124,7 @@ export function validateColumnValues<T extends IBaseModel>(
 
   if (!model && entity.id !== undefined) {
     errors.push(
-      getSchemaValidationError(
+      _getSchemaValidationError(
         entity.name,
         'id',
         entity.id,
@@ -129,7 +133,7 @@ export function validateColumnValues<T extends IBaseModel>(
     );
   } else if (model && entity.id !== model.id) {
     errors.push(
-      getSchemaValidationError(
+      _getSchemaValidationError(
         entity.name,
         'id',
         entity.id,
@@ -141,7 +145,7 @@ export function validateColumnValues<T extends IBaseModel>(
   }
 
   if (!model && entity.createdBy !== undefined) {
-    getSchemaValidationError(
+    _getSchemaValidationError(
       entity.name,
       'createdBy',
       entity.createdBy,
@@ -152,7 +156,7 @@ export function validateColumnValues<T extends IBaseModel>(
     entity.createdBy &&
     entity.createdBy !== model.createdBy
   ) {
-    getSchemaValidationError(
+    _getSchemaValidationError(
       entity.name,
       'createdBy',
       entity.id,
@@ -164,7 +168,7 @@ export function validateColumnValues<T extends IBaseModel>(
 
   if (!model && entity.createdDate !== undefined) {
     errors.push(
-      getSchemaValidationError(
+      _getSchemaValidationError(
         entity.name,
         'createdDate',
         dateToIsoString(entity.createdDate),
@@ -180,7 +184,7 @@ export function validateColumnValues<T extends IBaseModel>(
     if (modelTime !== entityTime) {
       const entityDateString = dateToIsoString(entity.createdDate);
 
-      getSchemaValidationError(
+      _getSchemaValidationError(
         entity.name,
         'createdDate',
         entityDateString,
@@ -192,7 +196,7 @@ export function validateColumnValues<T extends IBaseModel>(
   }
 
   if (!model && entity.updatedBy !== undefined) {
-    getSchemaValidationError(
+    _getSchemaValidationError(
       entity.name,
       'updatedBy',
       entity.updatedBy,
@@ -203,7 +207,7 @@ export function validateColumnValues<T extends IBaseModel>(
     entity.updatedBy &&
     entity.updatedBy !== model.updatedBy
   ) {
-    getSchemaValidationError(
+    _getSchemaValidationError(
       entity.name,
       'updatedBy',
       entity.id,
@@ -215,7 +219,7 @@ export function validateColumnValues<T extends IBaseModel>(
 
   if (!model && entity.updatedDate !== undefined) {
     errors.push(
-      getSchemaValidationError(
+      _getSchemaValidationError(
         entity.name,
         'updatedDate',
         dateToIsoString(entity.updatedDate),
@@ -232,7 +236,7 @@ export function validateColumnValues<T extends IBaseModel>(
       const entityDateString = dateToIsoString(entity.updatedDate);
 
       errors.push(
-        getSchemaValidationError(
+        _getSchemaValidationError(
           entity.name,
           'updatedDate',
           entityDateString,
@@ -247,10 +251,7 @@ export function validateColumnValues<T extends IBaseModel>(
   (Object.keys(entity.schema) as Extract<keyof T, string>[])
     .filter(
       (k) =>
-        (
-          entity.userImmutableColumns ??
-          (BaseEntity.userImmutableColumns as Extract<keyof T, string>[])
-        ).indexOf(k) === -1 &&
+        entity.userImmutableFields.indexOf(k) === -1 &&
         typeof entity.schema[k] !== 'string' &&
         !Array.isArray(entity.schema[k])
     )
@@ -261,7 +262,7 @@ export function validateColumnValues<T extends IBaseModel>(
 
       if (!field.isNullable && fieldValue === null) {
         errors.push(
-          getSchemaValidationError(
+          _getSchemaValidationError(
             entity.name,
             fieldName,
             null,
@@ -276,7 +277,7 @@ export function validateColumnValues<T extends IBaseModel>(
         field.defaultValue !== undefined
       ) {
         errors.push(
-          getSchemaValidationError(
+          _getSchemaValidationError(
             entity.name,
             fieldName,
             null,
@@ -286,7 +287,7 @@ export function validateColumnValues<T extends IBaseModel>(
           )
         );
       } else if (field.type === FieldType.varchar) {
-        fieldErrors = validateStringFieldValue(
+        fieldErrors = _validateStringFieldValue(
           entity.name,
           fieldName,
           field,
@@ -294,7 +295,7 @@ export function validateColumnValues<T extends IBaseModel>(
           model?.id
         );
       } else if (field.type === FieldType.smallint) {
-        fieldErrors = validateIntegerFieldValue(
+        fieldErrors = _validateIntegerFieldValue(
           entity.name,
           fieldName,
           field,
@@ -318,7 +319,7 @@ export function validateColumnValues<T extends IBaseModel>(
 function validateColumnConfiguration<T extends IBaseModel>(
   entityName: EntityName,
   fieldName: Extract<keyof T, string>,
-  field: Field
+  field: Readonly<Field>
 ) {
   const errors: IApiError[] = [];
   let typeModifierText = '';
@@ -326,7 +327,7 @@ function validateColumnConfiguration<T extends IBaseModel>(
   if (field.type === FieldType.varchar) {
     if (!isPositiveInteger(field.maxLength) || field.maxLength !== Infinity) {
       errors.push(
-        getSchemaConfigurationError(
+        _getSchemaConfigurationError(
           entityName,
           fieldName,
           field,
@@ -342,7 +343,7 @@ function validateColumnConfiguration<T extends IBaseModel>(
         field.minLength === Infinity)
     ) {
       errors.push(
-        getSchemaConfigurationError(
+        _getSchemaConfigurationError(
           entityName,
           fieldName,
           field,
@@ -363,34 +364,41 @@ function validateColumnConfiguration<T extends IBaseModel>(
 }
 
 export function generateColumnDefinitions<T extends IBaseModel>(
-  entityName: EntityName,
-  schema: EntitySchema<T>
+  entity: Entity<T>
 ) {
   const columns: string[] = [];
   const apiErrors: IApiError[] = [];
   const indexes: string[] = [];
 
-  (Object.keys(schema) as Extract<keyof T, string>[])
-    .filter((k) => typeof schema[k] !== 'string' && !Array.isArray(schema[k]))
+  (Object.keys(entity.schema) as Extract<keyof T, string>[])
+    .filter(
+      (k) =>
+        typeof entity.schema[k] !== 'string' && !Array.isArray(entity.schema[k])
+    )
     .forEach((fieldName) => {
-      const field = schema[fieldName] as Field;
+      const field = entity.schema[fieldName] as Readonly<Field>;
 
       const { typeModifierText, errors } = validateColumnConfiguration(
-        entityName,
+        entity.name,
         fieldName,
         field
       );
 
-      if (field.foreignKeyColumn) {
+      const forgienKey: Readonly<IForeignKey> | undefined =
+        entity.foreignKeys[fieldName];
+
+      if (forgienKey) {
         indexes.push(
-          `CREATE INDEX IF NOT EXISTS ${entityName}_${fieldName}_index ON ${entityName} (${fieldName});`
+          `CREATE INDEX IF NOT EXISTS ${entity.name}_${fieldName}_index ON ${entity.name} (${fieldName});`
         );
       }
 
       errors.forEach((e) => apiErrors.push(e));
 
       const typeText = `${field.type}${typeModifierText}`;
-      const primaryKeyText = field.isPrimaryKey ? ' PRIMARY KEY ' : '';
+
+      const primaryKeyText =
+        entity.primaryKey === fieldName ? ' PRIMARY KEY ' : '';
 
       const nullableText =
         field.isNullable || primaryKeyText ? '' : ' NOT NULL ';
@@ -400,11 +408,13 @@ export function generateColumnDefinitions<T extends IBaseModel>(
           ? ` DEFAULT ${field.defaultValue} `
           : '';
 
-      const forgienKeyText = field.foreignKeyTable
-        ? ` REFERENCES ${field.foreignKeyTable}(${field.foreignKeyColumn}) `
+      const forgienKeyText = forgienKey
+        ? ` REFERENCES ${forgienKey.entityName}(${forgienKey.fieldName}) `
         : '';
 
-      const casecadeText = field.cascadeOnDelete ? ' ON DELETE CASCADE ' : '';
+      const casecadeText = forgienKey?.cascadeOnDelete
+        ? ' ON DELETE CASCADE '
+        : '';
 
       columns.push(
         `${fieldName} ${typeText}${primaryKeyText}${nullableText}${defaultText}${forgienKeyText}${casecadeText};`
@@ -428,13 +438,7 @@ export function getColumnNamesAndValues<T extends IBaseModel>(
   const columnValues: unknown[] = [];
 
   (Object.keys(entity.schema) as Extract<keyof T, string>[])
-    .filter(
-      (fieldName) =>
-        (
-          entity.userImmutableColumns ??
-          (BaseEntity.userImmutableColumns as Extract<keyof T, string>[])
-        ).indexOf(fieldName) === -1
-    )
+    .filter((fieldName) => entity.userImmutableFields.indexOf(fieldName) === -1)
     .forEach((fieldName) => {
       const value = entity[fieldName];
 

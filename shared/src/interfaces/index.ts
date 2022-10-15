@@ -5,3 +5,5 @@ export * from './api-error';
 export * from './registry-value';
 export * from './registry';
 export * from './injection';
+export * from './dependency';
+export * from './vertex';

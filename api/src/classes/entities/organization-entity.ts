@@ -4,7 +4,7 @@ import { ISeedData, IOrganizationModel, IUserModel } from '@interfaces';
 import { Entity } from '@types';
 import { BaseEntity } from './base-entity';
 
-@entity(EntityName.calendar)
+@entity(EntityName.organization)
 export class OrganizationEntity
   extends BaseEntity<IOrganizationModel>
   implements Entity<IOrganizationModel>

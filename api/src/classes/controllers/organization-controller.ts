@@ -1,6 +1,6 @@
 import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
 import { authenticate, controller, route, routeParameter } from '@decorators';
-import { ControllerName } from '@enums/http';
+import { ControllerName } from '@enums';
 import {
   IOrganizationService,
   IOrganizationController,
@@ -18,18 +18,19 @@ export class OrganizationController implements IOrganizationController {
   @route(HttpVerb.get, '/:id')
   public async get(@routeParameter('id') id: string) {
     try {
-      const user = await this.#organizationService.get(id);
+      const organization = await this.#organizationService.get(id);
 
-      this.response.send(user);
+      this.httpContext.sendResponse(organization);
     } catch {
-      this.response.send(HttpStatusCode.notFound);
+      // TODO: Handle generic errors too, DB availability etc
+      this.httpContext.sendError(HttpStatusCode.notFound);
     }
   }
 
   public constructor(
     @inject(dependencyInjectionTokens.httpContext)
     public readonly httpContext: IHttpContext,
-    @inject(dependencyInjectionTokens.userContext)
+    @inject(dependencyInjectionTokens.userContext, true)
     public readonly userContext: Readonly<IUserContext> | undefined | null,
     @inject(dependencyInjectionTokens.userService)
     organizationService: IOrganizationService

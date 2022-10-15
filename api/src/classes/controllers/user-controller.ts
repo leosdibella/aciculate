@@ -11,7 +11,7 @@ import { IHttpContext, IUserContext } from '@interfaces/contexts';
 import { ICreateUserRequest, IUserService } from '@interfaces/services';
 import { inject } from '@shared/decorators';
 import { dependencyInjectionTokens } from '@data';
-import { ControllerName } from '@enums/http';
+import { ControllerName } from '@enums';
 
 @controller(ControllerName.userController)
 export class UserController implements IUserController {
@@ -23,9 +23,10 @@ export class UserController implements IUserController {
     try {
       const user = await this.#userService.get(id);
 
-      this.response.send(user);
+      this.httpContext.sendResponse(user);
     } catch {
-      this.response.send(HttpStatusCode.notFound);
+      // TODO: Handle generic errors too, DB availability etc
+      this.httpContext.sendError(HttpStatusCode.notFound);
     }
   }
 
@@ -35,16 +36,16 @@ export class UserController implements IUserController {
     try {
       const user = await this.#userService.create(createUserRequest);
 
-      this.response.send(user);
+      this.httpContext.sendResponse(user);
     } catch {
-      // TODO
+      // TODO: Handle generic errors too, DB availability etc
     }
   }
 
   public constructor(
     @inject(dependencyInjectionTokens.httpContext)
     public readonly httpContext: IHttpContext,
-    @inject(dependencyInjectionTokens.userContext)
+    @inject(dependencyInjectionTokens.userContext, true)
     public readonly userContext: Readonly<IUserContext> | undefined | null,
     @inject(dependencyInjectionTokens.userService)
     userService: IUserService

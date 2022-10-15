@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import format from 'pg-format';
-import { Entity, EntityNameModel, EntitySchema, ModelEntityName } from '@types';
+import { Entity, EntityNameModel } from '@types';
 import {
   IBaseModel,
   IDatabaseContext,
@@ -20,7 +20,7 @@ import { ApiError } from '@shared/classes';
 import { ApiErrorCode, Role } from '@shared/enums';
 import { EntityName } from '@enums';
 import { inject } from '@shared/decorators';
-import { databaseMetadataKeys, dependencyInjectionTokens } from 'src/data';
+import { dependencyInjectionTokens } from '@data';
 
 export class DatabaseContext implements IDatabaseContext {
   static readonly #databasePool = new Pool();
@@ -162,14 +162,11 @@ export class DatabaseContext implements IDatabaseContext {
     return;
   }
 
-  public async migrateSchema<T extends IBaseModel>(
-    entityName: ModelEntityName<T>,
-    schema: EntitySchema<T>
-  ) {
-    const { columns, indexes } = generateColumnDefinitions(entityName, schema);
+  public async migrateSchema<T extends IBaseModel>(entity: Entity<T>) {
+    const { columns, indexes } = generateColumnDefinitions(entity);
 
     await this.#pool.query(
-      `CREATE TABLE IF NOT EXISTS ${entityName} (${columns.join(',\n')});`
+      `CREATE TABLE IF NOT EXISTS ${entity.name} (${columns.join(',\n')});`
     );
 
     for (let i = 0; i < indexes.length; ++i) {
@@ -224,26 +221,19 @@ export class DatabaseContext implements IDatabaseContext {
     let user: IUserModel | undefined;
     let role: IRoleModel | undefined;
 
-    (Object.keys(this.#databaseEntities) as EntityName[]).forEach((t) => {
-      const schema: EntitySchema<EntityNameModel<typeof t>> =
-        Reflect.getMetadata(
-          databaseMetadataKeys.field,
-          this.#databaseEntities[t].prototype
-        );
-
-      this.migrateSchema<EntityNameModel<typeof t>>(t, schema);
-    });
-
     for (let i = 0; i < this.#seedableEntities.length; ++i) {
       const entityName = this.#seedableEntities[i];
-      const seedableConstructor = this.#databaseEntities[entityName];
+
+      /*const seedableConstructor = this.#databaseEntities[entityName];
 
       const values = await this.seed<EntityNameModel<typeof entityName>>(
         entityName,
         seedableConstructor as IEntityConstructor<
           EntityNameModel<typeof entityName>
         >
-      );
+      );*/
+
+      const values: IRoleModel[] | IUserModel[] | IOrganizationModel[] = [];
 
       switch (entityName) {
         case EntityName.role:
@@ -278,8 +268,22 @@ export class DatabaseContext implements IDatabaseContext {
         updatedBy: user.id
       });
 
-      await this.insert(organizationUserRole);
+      // await this.insert(organizationUserRole);
+
+      console.log(organizationUserRole);
     }
+
+    return new Promise<void>((resolve) => {
+      resolve();
+    });
+
+    /*(Object.keys(this.#databaseEntities) as EntityName[]).forEach((t) => {
+      const entity = new this.#databaseEntities[t]({}) as Entity<
+        EntityNameModel<typeof t>
+      >;
+
+      this.migrateSchema(entity);
+    });*/
   }
 
   public constructor(
@@ -289,7 +293,7 @@ export class DatabaseContext implements IDatabaseContext {
     }>,
     @inject(dependencyInjectionTokens.seedableEntities)
     seedableEntities: Readonly<EntityName[]>,
-    @inject(dependencyInjectionTokens.userContext)
+    @inject(dependencyInjectionTokens.userContext, true)
     userContext: Readonly<IUserContext> | null | undefined
   ) {
     this.#databaseEntities = databaseEntities;

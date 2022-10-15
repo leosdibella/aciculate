@@ -28,36 +28,43 @@ import {
 } from '@enums';
 import {
   DependencyInjectionTokenKey,
-  DependencyInjectionTokenKeyValue
+  DependencyInjectionTokenValue
 } from '@types';
 
 const _dependencies = Object.freeze<
   Partial<{
     [key in DependencyInjectionTokenKey]: IRegistryValue<
-      DependencyInjectionTokenKeyValue<key>
+      DependencyInjectionTokenValue<key>
     >;
   }>
 >({
   [ContextName.applicationContext]: {
-    value: ApplicationContext
+    value: ApplicationContext,
+    isConstructor: true
   },
   [ContextName.httpContext]: {
-    value: HttpContext
+    value: HttpContext,
+    isConstructor: true
   },
   [ContextName.databaseContext]: {
-    value: DatabaseContext
+    value: DatabaseContext,
+    isConstructor: true
   },
   [ServiceName.userService]: {
-    value: UserService
+    value: UserService,
+    isConstructor: true
   },
   [ServiceName.organizationService]: {
-    value: OrganizationService
+    value: OrganizationService,
+    isConstructor: true
   },
   [ControllerName.userController]: {
-    value: UserController
+    value: UserController,
+    isConstructor: true
   },
   [ControllerName.organizationController]: {
-    value: OrganizationController
+    value: OrganizationController,
+    isConstructor: true
   },
   [ApplicationDependency.controllers]: {
     value: [UserController, OrganizationController]
@@ -93,7 +100,7 @@ const _provisions = (() => {
 
 registry.provideMany(_provisions);
 
-const _applicationContext = registry.create<IApplicationContext>(
+const _applicationContext = registry.construct<IApplicationContext>(
   dependencyInjectionTokens.applicationContext
 );
 

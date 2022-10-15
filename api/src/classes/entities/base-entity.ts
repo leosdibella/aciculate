@@ -1,25 +1,31 @@
 import { FieldType, EntityName } from '@enums';
-import { IBaseModel } from '@interfaces';
+import { IBaseModel, IForeignKey } from '@interfaces';
 import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
-import { Field, Entity, EntitySchema } from '@types';
+import { Field, EntitySchema, ModelEntityName } from '@types';
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode } from '@shared/enums';
 import { field, foreignKey, primaryKey, userImmutable } from '@decorators';
 import { databaseMetadataKeys } from '@data/database-metadata-keys';
 
-export abstract class BaseEntity<T extends IBaseModel>
-  implements Entity<IBaseModel>
-{
+export abstract class BaseEntity<T extends IBaseModel> {
   protected readonly _createdDate?: Date;
   protected readonly _updatedDate?: Date;
+
+  #schema?: Readonly<EntitySchema<T>>;
+  #name?: ModelEntityName<T>;
+  #userImmutableFields?: Readonly<Extract<keyof T, string>[]>;
+  #primaryKey?: Extract<keyof T, string>;
+  #foreignKeys?: Readonly<
+    Partial<Record<Extract<keyof T, string>, Readonly<IForeignKey>>>
+  >;
 
   //defaultValue: 'uuid_generate_v4()'
   @field({
     type: FieldType.uuid
   })
-  @(primaryKey<IBaseModel>)
-  @(userImmutable<IBaseModel>)
+  @primaryKey
+  @userImmutable
   public readonly id?: string;
 
   @field({
@@ -33,7 +39,7 @@ export abstract class BaseEntity<T extends IBaseModel>
   @foreignKey({
     entityName: EntityName.user
   })
-  @(userImmutable<IBaseModel>)
+  @userImmutable
   public readonly createdBy?: string;
 
   @field({
@@ -42,7 +48,7 @@ export abstract class BaseEntity<T extends IBaseModel>
   @foreignKey({
     entityName: EntityName.user
   })
-  @(userImmutable<IBaseModel>)
+  @userImmutable
   public readonly updatedBy?: string;
 
   //defaultValue: 'now()'
@@ -60,18 +66,72 @@ export abstract class BaseEntity<T extends IBaseModel>
     return this._updatedDate ? new Date(this._updatedDate) : undefined;
   }
 
-  public get schema(): EntitySchema<T> {
-    return Reflect.getMetadata(
-      databaseMetadataKeys.field,
-      this.constructor.prototype
-    );
+  public get userImmutableFields(): Readonly<Extract<keyof T, string>[]> {
+    if (!this.#userImmutableFields) {
+      this.#userImmutableFields = Object.freeze<Extract<keyof T, string>>(
+        Reflect.getMetadata(
+          databaseMetadataKeys.userImmutable,
+          this.constructor.prototype
+        ) ?? []
+      );
+    }
+
+    return this.#userImmutableFields!;
   }
 
-  public get name(): EntityName {
-    return Reflect.getMetadata(
-      databaseMetadataKeys.entity,
-      this.constructor.prototype
-    );
+  public get primaryKey(): Extract<keyof T, string> {
+    if (!this.#primaryKey) {
+      this.#primaryKey =
+        Reflect.getMetadata(
+          databaseMetadataKeys.primaryKey,
+          this.constructor.prototype
+        ) ?? 'id';
+    }
+
+    return this.#primaryKey!;
+  }
+
+  public get foreignKeys(): Partial<
+    Record<Extract<keyof T, string>, Readonly<IForeignKey>>
+  > {
+    if (!this.#foreignKeys) {
+      this.#foreignKeys = Object.freeze<
+        Partial<Record<Extract<keyof T, string>, Readonly<IForeignKey>>>
+      >(
+        (Reflect.getMetadata(
+          databaseMetadataKeys.forgienKey,
+          this.constructor.prototype
+        ) ?? {}) as Partial<
+          Record<Extract<keyof T, string>, Readonly<IForeignKey>>
+        >
+      );
+    }
+
+    return this.#foreignKeys!;
+  }
+
+  public get schema(): EntitySchema<T> {
+    if (!this.#schema) {
+      this.#schema = Object.freeze<EntitySchema<T>>(
+        (Reflect.getMetadata(
+          databaseMetadataKeys.field,
+          this.constructor.prototype
+        ) ?? {}) as EntitySchema<T>
+      );
+    }
+
+    return this.#schema!;
+  }
+
+  public get name(): ModelEntityName<T> {
+    if (!this.#name) {
+      this.#name = Reflect.getMetadata(
+        databaseMetadataKeys.entity,
+        this.constructor
+      );
+    }
+
+    return this.#name!;
   }
 
   public toModel(): T {

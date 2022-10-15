@@ -1,13 +1,12 @@
 import { databaseMetadataKeys } from '@data/database-metadata-keys';
 import { IBaseModel, IForeignKey } from '@interfaces';
-import { Constructor } from '@shared/types';
 import { Entity } from '@types';
 
 export function foreignKey<T extends IBaseModel>(
   definition: IForeignKey
 ): PropertyDecorator {
   return function foreignKeyDecorator<S extends T>(
-    target: Constructor<Entity<S>>,
+    target: Entity<S>,
     proeprtyKey: Extract<keyof S, string>
   ) {
     const forgienKeyDictionary: Partial<

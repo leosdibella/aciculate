@@ -7,7 +7,7 @@ import {
 import { generateHash, generateSalt } from '@utilities';
 import { OrganizationUserRoleEntity, UserEntity } from '@classes/entities';
 import { inject } from '@shared/decorators';
-import { dependencyInjectionTokens } from 'src/data';
+import { dependencyInjectionTokens } from '@data';
 
 export class UserService implements IUserService {
   readonly #databaseContext: IDatabaseContext;

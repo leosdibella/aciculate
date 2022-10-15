@@ -20,6 +20,10 @@ export function route<T extends IController>(
       path
     });
 
-    Reflect.defineMetadata(httpMetadataKeys.route, routeDictionary, target);
+    Reflect.defineMetadata(
+      httpMetadataKeys.route,
+      routeDictionary,
+      target.constructor
+    );
   };
 }
