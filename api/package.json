@@ -5,6 +5,7 @@
     "main": "index.js",
     "scripts": {
         "start": "ts-node -r tsconfig-paths/register ./src/index.ts",
+        "start:ssl": "ts-node -r tsconfig-paths/register ./src/index.ts --env useSsl=true",
         "type-check": "tsc --noEmit --skipLibCheck",
         "type-check-diagnostics": "tsc --noEmit --skipLibCheck --extendedDiagnostics",
         "type-check-all": "tsc --noEmit",

@@ -3,4 +3,5 @@
 .dockerignore
 .gitignore
 *.Dockerfile
+**/*.pem
 .env

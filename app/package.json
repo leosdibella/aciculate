@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "serve": "webpack serve --progress",
+    "serve:watch":  "webpack serve --progress --env shouldWatch=true",
+    "serve:ssl": "webpack serve --progress --env useSsl=true",
+    "serve:ssl:watch": "webpack serve --progress --env useSsl=true shouldWatch=true",
     "build": "webpack --progress --env isProduction=true",
+    "build:ssl": "webpack --progress --env isProduction=true useSsl=true",
     "type-check": "tsc --noEmit --skipLibCheck",
     "type-check-diagnostics": "tsc --noEmit --skipLibCheck --extendedDiagnostics",
     "type-check-all": "tsc --noEmit",
