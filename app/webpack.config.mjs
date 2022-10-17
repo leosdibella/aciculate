@@ -25,12 +25,19 @@ export default (env = {}) => {
     ? process.env.ACICULATE_API_ORIGIN_SSL ?? defaultApiOriginSsl
     : process.env.ACICULATE_API_ORIGIN ?? defaultApiOrigin
 
+  const sslKeyFilePath = process.env.ACICULATE_APP_SSL_KEY_FILEPATH ?? defaultSslKeyFilePath;
+  const sslCertFilePath = process.env.ACICULATE_APP_SSL_CERT_FILEPATH ?? defaultSslCertFilePath;
+
   const key = useSsl ? readFileSync(
-    path.resolve(__dirname, process.env.ACICULATE_APP_SSL_KEY_FILEPATH ?? defaultSslKeyFilePath)
+    sslKeyFilePath[0] === '/'
+      ? sslKeyFilePath
+      : path.resolve(__dirname, sslKeyFilePath)
   ) : undefined;
 
   const cert = useSsl ? readFileSync(
-    path.resolve(__dirname, process.env.ACICULATE_APP_SSL_CERT_FILEPATH ?? defaultSslCertFilePath)
+    sslCertFilePath[0] === '/'
+      ? sslCertFilePath
+      : path.resolve(__dirname, sslCertFilePath)
   ) : undefined;
 
   const server = {

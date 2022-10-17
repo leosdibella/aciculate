@@ -98,11 +98,15 @@ export class ApplicationContext implements IApplicationContext {
 
     if (ApplicationContext.#useSsl) {
       const key = readFileSync(
-        path.resolve(__dirname, ApplicationContext.#sslKeyFilePath)
+        ApplicationContext.#sslKeyFilePath[0] === '/'
+          ? ApplicationContext.#sslKeyFilePath
+          : path.resolve(__dirname, ApplicationContext.#sslKeyFilePath)
       );
 
       const cert = readFileSync(
-        path.resolve(__dirname, ApplicationContext.#sslCertFilePath)
+        ApplicationContext.#sslCertFilePath[0] === '/'
+          ? ApplicationContext.#sslCertFilePath
+          : path.resolve(__dirname, ApplicationContext.#sslCertFilePath)
       );
 
       this.#server = createHttpsServer({ key, cert }, this.#express);
