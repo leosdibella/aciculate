@@ -16,7 +16,11 @@ import {
   IUserController,
   IOrganizationService,
   IUserService,
-  IEntityConstructor
+  IEntityConstructor,
+  ICalendarService,
+  ICalendarController,
+  ICalendarEventService,
+  ICalendarEventController
 } from '@interfaces';
 import { Constructor } from '@shared/types';
 import { EntityNameModel } from '../database';
@@ -40,10 +44,18 @@ export type DependencyInjectionTokenValue<
   ? Constructor<IOrganizationService>
   : T extends ServiceName.userService
   ? Constructor<IUserService>
+  : T extends ServiceName.calendarService
+  ? Constructor<ICalendarService>
+  : T extends ServiceName.calendarEventService
+  ? Constructor<ICalendarEventService>
   : T extends ControllerName.organizationController
   ? Constructor<IOrganizationController>
   : T extends ControllerName.userController
   ? Constructor<IUserController>
+  : T extends ControllerName.calendarController
+  ? Constructor<ICalendarController>
+  : T extends ControllerName.calendarEventController
+  ? Constructor<ICalendarEventController>
   : T extends ApplicationDependency.controllers
   ? Constructor<IController>[]
   : T extends DatabaseDependency.databaseEntities

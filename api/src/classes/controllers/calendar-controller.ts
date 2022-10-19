@@ -1,28 +1,28 @@
-import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
+import { dependencyInjectionTokens } from '@data';
 import { authenticate, controller, route, routeParameter } from '@decorators';
 import { ControllerName } from '@enums';
 import {
-  IOrganizationService,
-  IOrganizationController,
-  IUserContext,
+  ICalendarController,
+  ICalendarModel,
+  ICalendarService,
   IHttpContext,
-  IOrganizationModel
+  IUserContext
 } from '@interfaces';
 import { inject } from '@shared/decorators';
 import { HttpVerb } from '@shared/enums';
 import { notFound, ok } from '@utilities';
 
-@controller(ControllerName.organizationController)
-export class OrganizationController implements IOrganizationController {
-  readonly #organizationService: IOrganizationService;
+@controller(ControllerName.calendarController)
+export class CalendarController implements ICalendarController {
+  readonly #calendarService: ICalendarService;
 
   @authenticate()
-  @route<IOrganizationController, IOrganizationModel>(HttpVerb.get, '/:id')
+  @route<ICalendarController, ICalendarModel>(HttpVerb.get, '/:id')
   public async get(@routeParameter('id') id: string) {
     try {
-      const organization = await this.#organizationService.get(id);
+      const calendar = await this.#calendarService.get(id);
 
-      return ok(organization);
+      return ok(calendar);
     } catch {
       // TODO: Handle generic errors too, DB availability etc
       throw notFound();
@@ -34,9 +34,9 @@ export class OrganizationController implements IOrganizationController {
     public readonly httpContext: IHttpContext,
     @inject(dependencyInjectionTokens.userContext, true)
     public readonly userContext: Readonly<IUserContext> | undefined | null,
-    @inject(dependencyInjectionTokens.organizationService)
-    organizationService: IOrganizationService
+    @inject(dependencyInjectionTokens.calendarService)
+    calendarService: ICalendarService
   ) {
-    this.#organizationService = organizationService;
+    this.#calendarService = calendarService;
   }
 }

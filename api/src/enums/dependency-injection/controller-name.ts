@@ -1,4 +1,6 @@
 export enum ControllerName {
   userController = 'userController',
-  organizationController = 'organizationController'
+  calendarController = 'calendarController',
+  organizationController = 'organizationController',
+  calendarEventController = 'calendarEventController'
 }

@@ -1,4 +1,6 @@
 export enum ServiceName {
   userService = 'userService',
-  organizationService = 'organizationService'
+  calendarService = 'calendarService',
+  organizationService = 'organizationService',
+  calendarEventService = 'calendarEventService'
 }

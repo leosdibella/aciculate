@@ -4,3 +4,4 @@ export * from './database';
 export * from './contexts';
 export * from './controllers';
 export * from './metadata';
+export * from './utilities';

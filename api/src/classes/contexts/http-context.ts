@@ -1,27 +1,35 @@
-import { IHttpContext } from '@interfaces';
-import { HttpStatusCode } from '@shared/enums';
+import { IHttpContext, IHttpResponse } from '@interfaces';
 import { Request, Response } from 'express';
+import { Headers } from '@types';
 
 export class HttpContext implements IHttpContext {
   readonly #request: Request;
   readonly #response: Response;
 
+  public readonly responseHeaders: Headers = {};
+
   public get requestHeaders() {
     return this.#request.headers;
   }
 
-  public sendResponse(
-    response: unknown,
-    statusCode: HttpStatusCode = HttpStatusCode.success
-  ) {
-    this.#response.status(statusCode).send(response);
-  }
+  public sendResponse<T>(httpResponse: IHttpResponse<T>) {
+    const responseHeaders = Object.keys(this.responseHeaders);
 
-  public sendError(
-    statusCode: Exclude<HttpStatusCode, HttpStatusCode.success>,
-    response: unknown
-  ) {
-    this.#response.status(statusCode).send(response);
+    if (responseHeaders.length) {
+      responseHeaders.forEach((headerName) => {
+        this.#response.setHeader(headerName, this.responseHeaders[headerName]);
+      });
+    }
+
+    if (httpResponse.headers) {
+      Object.keys(httpResponse.headers).forEach((headerName) => {
+        this.#response.setHeader(headerName, httpResponse.headers![headerName]);
+      });
+    }
+
+    this.#response
+      .status(httpResponse.httpStatusCode)
+      .send(httpResponse.response);
   }
 
   public constructor(request: Request, response: Response) {

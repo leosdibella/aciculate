@@ -1,3 +1,4 @@
+import * as jwt from 'jsonwebtoken';
 import { httpMetadataKeys, dependencyInjectionTokens } from '@data';
 import { IUserContext } from '@interfaces/contexts';
 import { IController, IControllerRoute } from '@interfaces/controllers';
@@ -10,13 +11,32 @@ import {
 import { ApiError } from '@shared/classes';
 import { ApiErrorCode, HttpStatusCode, HttpVerb } from '@shared/enums';
 import { registry, toCamelCase } from '@shared/utilities';
-import { decodeJwt } from '@utilities';
 import { Request, Response } from 'express';
 import { Constructor } from '@shared/types';
 import { ControllerName } from '@enums';
 import { Controller } from '@types';
 
 const _mappedRoutes: Record<string, HttpVerb[]> = {};
+
+async function _decodeJwt(token?: string): Promise<IUserContext> {
+  return new Promise((resolve, reject) => {
+    if (!token) {
+      reject();
+    } else {
+      jwt.verify(
+        token,
+        process.env.TOKEN_SECRET as string,
+        (err: jwt.VerifyErrors, userContext: IUserContext) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(userContext);
+          }
+        }
+      );
+    }
+  });
+}
 
 function _resolveEndpointParameters<T extends IController>(
   endpoint: (...methodParameters: unknown[]) => void,
@@ -39,7 +59,7 @@ function _resolveEndpointParameters<T extends IController>(
       try {
         validator(request.body);
       } catch (e: unknown) {
-        response.status(HttpStatusCode.basRequest).send(e);
+        response.status(HttpStatusCode.badRequest).send(e);
       }
     }
 
@@ -131,7 +151,7 @@ export function controller<T extends ControllerName>(
               const token = request.headers.authorization?.split(' ')[1];
 
               try {
-                userContext = await decodeJwt(token);
+                userContext = await _decodeJwt(token);
               } catch (e: unknown) {
                 if (e !== undefined) {
                   userContext = null;

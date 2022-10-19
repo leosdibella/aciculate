@@ -28,26 +28,6 @@ export function generateSalt() {
   return randomBytes(saltByteLength).toString(bufferEncodiing);
 }
 
-export async function decodeJwt(token?: string): Promise<IUserContext> {
-  return new Promise((resolve, reject) => {
-    if (!token) {
-      reject();
-    } else {
-      jwt.verify(
-        token,
-        process.env.TOKEN_SECRET as string,
-        (err: jwt.VerifyErrors, userContext: IUserContext) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(userContext);
-          }
-        }
-      );
-    }
-  });
-}
-
 export async function generateHash(password: string, salt: string) {
   return new Promise<string>((resolve, reject) => {
     pbkdf2(

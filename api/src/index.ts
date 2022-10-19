@@ -15,8 +15,18 @@ import {
 } from '@classes';
 import { registry } from '@shared/utilities';
 import { IRegistryValue } from '@shared/interfaces';
-import { OrganizationController, UserController } from '@classes/controllers';
-import { OrganizationService, UserService } from '@classes/services';
+import {
+  CalendarController,
+  CalendarEventController,
+  OrganizationController,
+  UserController
+} from '@classes/controllers';
+import {
+  CalendarEventService,
+  CalendarService,
+  OrganizationService,
+  UserService
+} from '@classes/services';
 import { dependencyInjectionTokens } from '@data';
 import {
   ApplicationDependency,
@@ -54,6 +64,14 @@ const _dependencies = Object.freeze<
     value: UserService,
     isConstructor: true
   },
+  [ServiceName.calendarService]: {
+    value: CalendarService,
+    isConstructor: true
+  },
+  [ServiceName.calendarEventService]: {
+    value: CalendarEventService,
+    isConstructor: true
+  },
   [ServiceName.organizationService]: {
     value: OrganizationService,
     isConstructor: true
@@ -62,12 +80,25 @@ const _dependencies = Object.freeze<
     value: UserController,
     isConstructor: true
   },
+  [ControllerName.calendarController]: {
+    value: CalendarController,
+    isConstructor: true
+  },
+  [ControllerName.calendarEventController]: {
+    value: CalendarEventController,
+    isConstructor: true
+  },
   [ControllerName.organizationController]: {
     value: OrganizationController,
     isConstructor: true
   },
   [ApplicationDependency.controllers]: {
-    value: [UserController, OrganizationController]
+    value: [
+      UserController,
+      CalendarController,
+      OrganizationController,
+      CalendarEventController
+    ]
   },
   [DatabaseDependency.databaseEntities]: {
     value: {

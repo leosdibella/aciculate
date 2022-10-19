@@ -63,12 +63,14 @@ export class DirectedAcyclicGraph<T = unknown> {
     while (edges.length) {
       const vertexIndex = edges.pop()!;
 
-      if (visitedVertexIndices[vertexIndex]) {
+      if (visitedVertexIndices[vertexIndex] !== undefined) {
         throw new ApiError([
           {
             errorCode: ApiErrorCode.circularDependency,
             message: `Circular dependency detected at ${this.#vertexToString(
               this.#vertices[vertexIndex].value
+            )} originating from ${this.#vertexToString(
+              this.#vertices[startingVertexIndex].value
             )}`
           }
         ]);
