@@ -79,12 +79,12 @@ A lot. Most things are built from scratch, just for fun / challenge.
     - Uses Frontend Framework
     - Interacts with Authentication API, Calendar API and Logging API
 
-Though there are a few things I opted to leave well enough alone on, those incldue,
+Though there are a few things I opted to leave well enough alone on, those include,
 
 1. Cryptographic stuff
     - Never a good idea
 2. Database
-    - PostgresSQL is a perfect angel, even if it's a little big for this task
+    - PostgreSQL is a perfect angel, even if it's a little big for this task
     - Some other time I might make my own document style DB or something
 3. Databse Connections
     - node-postrges is good enough for me
@@ -96,20 +96,25 @@ Though there are a few things I opted to leave well enough alone on, those incld
     - I like Webpack
 7. Testing
     - I'm happy with Mocha
-8. Containerization + Orchestration
-    - Docker and Docker Compose are perfect angels
-9. Source Control
-    - git is a perfect angel
-10. Languages
-    - TypeScript, Rust, AssemblyScript and Go are nearly perfect angels
-11. IDE
-    - VS Code is not a perfect angel, but it's good enough
-
 
 Things I would have used if I was just trying to build this as quickly as possible,
 
 1. Invervsify (Dependency Injection)
 2. Vue 3, Angular, React, Svelte (Frontend Framework + Frontend Router)
-3. RxJS (Perfect Angel)
+3. RxJS
 4. TypeORM
 5. lodash 
+
+Perfect Angel Shoutouts
+-----------------------
+
+1. TypeScript
+2. Rust
+3. Go
+4. AssemblyScript
+5. Git
+6. Docker
+7. Node / NPM
+8. VS Code
+9. PostgreSQL
+10. RxJS
