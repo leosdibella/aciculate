@@ -1,6 +1,8 @@
 import { IHttpContext, IHttpResponse } from '@interfaces';
 import { Request, Response } from 'express';
 import { Headers } from '@types';
+import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
+import { inject } from '@shared/decorators';
 
 export class HttpContext implements IHttpContext {
   readonly #request: Request;
@@ -32,7 +34,12 @@ export class HttpContext implements IHttpContext {
       .send(httpResponse.response);
   }
 
-  public constructor(request: Request, response: Response) {
+  public constructor(
+    @inject(dependencyInjectionTokens.httpRequest)
+    request: Request,
+    @inject(dependencyInjectionTokens.httpResponse)
+    response: Response
+  ) {
     this.#request = request;
     this.#response = response;
   }

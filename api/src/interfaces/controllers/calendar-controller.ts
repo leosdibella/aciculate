@@ -3,5 +3,5 @@ import { ICalendarModel } from '../models';
 import { IController } from './controller';
 
 export interface ICalendarController extends IController {
-  get(id: string): Promise<IHttpResponse<ICalendarModel>>;
+  selectSingle(id: string): Promise<IHttpResponse<ICalendarModel>>;
 }

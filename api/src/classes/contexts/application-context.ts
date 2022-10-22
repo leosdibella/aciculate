@@ -67,14 +67,14 @@ export class ApplicationContext implements IApplicationContext {
       controllerConstructor
     );
 
-    const controllerRoutes: Readonly<Readonly<IControllerRoute<T>>[]> =
+    const controllerRoutes: Readonly<Readonly<IControllerRoute>[]> =
       Reflect.getMetadata(httpMetadataKeys.routes, controllerConstructor);
 
     controllerRoutes.forEach((r) => {
       router[r.httpVerb](r.path, r.action);
     });
 
-    this.#express.use(routePrefix, router);
+    this.#express.use(`/${routePrefix}`, router);
   }
 
   public async startApi() {

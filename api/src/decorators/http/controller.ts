@@ -1,41 +1,65 @@
-import * as jwt from 'jsonwebtoken';
 import { httpMetadataKeys, dependencyInjectionTokens } from '@data';
-import { IUserContext } from '@interfaces/contexts';
+import { IDatabaseContext, IUserContext } from '@interfaces/contexts';
 import { IController, IControllerRoute } from '@interfaces/controllers';
 import {
+  IHttpResponse,
   IQueryStringParameterMetadata,
   IRequestBodyMetadata,
   IRouteMetdata,
   IRouteParameterMetadata
 } from '@interfaces';
 import { ApiError } from '@shared/classes';
-import { ApiErrorCode, HttpStatusCode, HttpVerb } from '@shared/enums';
+import { ApiErrorCode, HttpStatusCode, HttpVerb, Role } from '@shared/enums';
 import { registry, toCamelCase } from '@shared/utilities';
 import { Request, Response } from 'express';
 import { Constructor } from '@shared/types';
-import { ControllerName } from '@enums';
+import { ControllerName, EntityName } from '@enums';
 import { Controller } from '@types';
+import { HttpError } from '@classes';
+import { decodeJwt } from '@utilities';
 
 const _mappedRoutes: Record<string, HttpVerb[]> = {};
 
-async function _decodeJwt(token?: string): Promise<IUserContext> {
-  return new Promise((resolve, reject) => {
-    if (!token) {
-      reject();
-    } else {
-      jwt.verify(
-        token,
-        process.env.TOKEN_SECRET as string,
-        (err: jwt.VerifyErrors, userContext: IUserContext) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(userContext);
-          }
+async function _authenticate<T extends IController>(
+  controllerInstance: T,
+  databaseContext: IDatabaseContext,
+  roles: Readonly<Role[]>
+): Promise<IHttpResponse | undefined> {
+  if (!controllerInstance.userContext) {
+    return {
+      httpStatusCode:
+        controllerInstance.userContext === null
+          ? HttpStatusCode.forbidden
+          : HttpStatusCode.unauthorized,
+      response: new ApiError([
+        {
+          errorCode: ApiErrorCode.invalidToken,
+          message:
+            controllerInstance.userContext === null
+              ? 'Missing authentication token'
+              : 'Invalid authentication token'
         }
-      );
+      ])
+    };
+  } else if (roles.length) {
+    const role = (
+      await databaseContext.selectMany({
+        entityName: EntityName.role
+      })
+    ).results.find((r) => r.id === controllerInstance.userContext!.roleId);
+
+    if (!role || roles.indexOf(role.role!) === -1) {
+      return {
+        httpStatusCode: HttpStatusCode.forbidden,
+        response: new ApiError([
+          {
+            errorCode: ApiErrorCode.insufficientPermissionsError,
+            message: `A role belonging to the set [${roles.join()}] is required to perform this operation.`
+          }
+        ])
+      };
     }
-  });
+  }
 }
 
 function _resolveEndpointParameters<T extends IController>(
@@ -103,26 +127,28 @@ function _resolveEndpointParameters<T extends IController>(
   return endpointParameters;
 }
 
-export function controller<T extends ControllerName>(
-  controllerName: T,
-  routePrefixOverride?: string
-) {
+export function controller<T extends ControllerName>(controllerName: T) {
   return function controllerDecorator<S extends Constructor<Controller<T>>>(
     target: S
   ) {
-    const routePrefix =
-      routePrefixOverride ??
-      toCamelCase(target.name.split('Controller')[0] ?? '');
+    const routePrefix = toCamelCase(
+      controllerName.split('Controller')[0] ?? ''
+    );
 
-    const routes: Readonly<IControllerRoute<Controller<T>>>[] = [];
+    const routes: Readonly<IControllerRoute>[] = [];
 
     const routeDictionary: Partial<
       Record<Extract<keyof Controller<T>, string>, Readonly<IRouteMetdata>>
     > = Reflect.getMetadata(httpMetadataKeys.route, target) ?? {};
 
+    const authenticationDictionary: Partial<
+      Record<Extract<keyof Controller<T>, string>, Readonly<Role[]>>
+    > = Reflect.getMetadata(httpMetadataKeys.authenticate, target) ?? {};
+
     Object.keys(routeDictionary).forEach(
       (actionName: Extract<keyof Controller<T>, string>) => {
         const property = target.prototype[actionName];
+        const roles = authenticationDictionary[actionName] ?? [];
 
         if (typeof property === 'function') {
           const route = routeDictionary[actionName];
@@ -149,9 +175,10 @@ export function controller<T extends ControllerName>(
             const action = async (request: Request, response: Response) => {
               let userContext: IUserContext | undefined | null;
               const token = request.headers.authorization?.split(' ')[1];
+              const tokenSecret = request.headers['X-Aciculate-Token-Secret'];
 
               try {
-                userContext = await _decodeJwt(token);
+                userContext = await decodeJwt(token);
               } catch (e: unknown) {
                 if (e !== undefined) {
                   userContext = null;
@@ -159,6 +186,15 @@ export function controller<T extends ControllerName>(
               }
 
               const controllerToken = dependencyInjectionTokens[controllerName];
+
+              const databaseContext = registry.construct<IDatabaseContext>(
+                dependencyInjectionTokens.databaseContext,
+                Object.freeze({
+                  [dependencyInjectionTokens.userContext]: Object.freeze({
+                    value: userContext
+                  })
+                })
+              );
 
               const httpController = registry.construct<Controller<T>>(
                 controllerToken,
@@ -175,6 +211,17 @@ export function controller<T extends ControllerName>(
                 })
               );
 
+              const authenticationError = await _authenticate(
+                httpController,
+                databaseContext,
+                roles
+              );
+
+              if (authenticationError) {
+                httpController.httpContext.sendResponse(authenticationError);
+                return;
+              }
+
               const endpoint = httpController[actionName];
 
               if (typeof endpoint === 'function') {
@@ -184,19 +231,26 @@ export function controller<T extends ControllerName>(
                   response
                 );
 
-                if (endpoint.constructor.name === 'AsyncFunction') {
-                  await endpoint(...endpointParameters);
-                } else {
-                  endpoint(...endpointParameters);
+                try {
+                  const httpResponse = (
+                    endpoint.constructor.name === 'AsyncFunction'
+                      ? await endpoint(...endpointParameters)
+                      : endpoint(...endpointParameters)
+                  ) as IHttpResponse;
+
+                  httpController.httpContext.sendResponse(httpResponse);
+                } catch (e: unknown) {
+                  if (e instanceof HttpError) {
+                    httpController.httpContext.sendResponse(e.value);
+                  }
                 }
               }
             };
 
             routes.push(
-              Object.freeze<IControllerRoute<Controller<T>>>({
+              Object.freeze<IControllerRoute>({
                 ...route,
-                action,
-                actionName
+                action
               })
             );
           }
@@ -208,7 +262,7 @@ export function controller<T extends ControllerName>(
 
     Reflect.defineMetadata(
       httpMetadataKeys.routes,
-      Object.freeze<IControllerRoute<Controller<T>>[]>(routes),
+      Object.freeze<IControllerRoute[]>(routes),
       target
     );
 

@@ -116,7 +116,7 @@ function _generateDependencyGraph(
   runtimeDependencies: Readonly<Record<symbol, IRegistryValue>>
 ): DirectedAcyclicGraph<IDependency> {
   const dag = new DirectedAcyclicGraph<IDependency>({
-    verify: true,
+    shouldVerify: true,
     vertexToString: (dependecy) => dependecy.constructor.name,
     areEqualVertices: (dependency1: IDependency, dependecy2: IDependency) =>
       dependency1.constructor === dependecy2.constructor
@@ -186,7 +186,7 @@ function construct<U>(
     runtimeDependencies
   );
 
-  const topologicallySorted = dag.topologicallySorted;
+  const topologicallySorted = dag.topologicallySorted.reverse();
   const constructed: Record<symbol, unknown> = {};
 
   while (topologicallySorted.length) {

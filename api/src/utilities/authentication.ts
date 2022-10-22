@@ -13,15 +13,53 @@ const keyLength = 1024;
 const iterations = 10_000;
 const digest = 'sha512';
 const bufferEncodiing = 'base64';
-const tokenDurationSeconds = secondsPerMinute * minutesPerHour * hoursPerDay;
+
+const tokenLifespanMinutes = +(
+  process.env.ACICULATE_API_TOKEN_LIFESPAN_MINUTES ?? 'NaN'
+);
+
+const tokenDurationSeconds = Math.ceil(
+  Math.abs(
+    isNaN(tokenLifespanMinutes)
+      ? minutesPerHour * hoursPerDay
+      : tokenLifespanMinutes
+  ) * secondsPerMinute
+);
 
 const jwtOptions: jwt.SignOptions = {
   algorithm: jwtAlgorithm,
-  expiresIn: tokenDurationSeconds
+  expiresIn: isFinite(tokenDurationSeconds) ? tokenDurationSeconds : undefined
 };
 
-export function generateToken(userContext: IUserContext, secret: string) {
-  return jwt.sign(userContext, secret, jwtOptions);
+export async function decodeJwt(
+  tokenSecret?: string,
+  token?: string
+): Promise<IUserContext> {
+  return new Promise((resolve, reject) => {
+    if (!token || !tokenSecret) {
+      reject();
+    } else {
+      jwt.verify(
+        token,
+        tokenSecret,
+        (err: jwt.VerifyErrors, payload: jwt.JwtPayload) => {
+          if (err) {
+            reject(err);
+          } else {
+            const {
+
+            }
+
+            resolve(userContext);
+          }
+        }
+      );
+    }
+  });
+}
+
+export function generateToken(userContext: IUserContext, tokenSecret: string) {
+  return jwt.sign(userContext, tokenSecret, jwtOptions);
 }
 
 export function generateSalt() {

@@ -1,13 +1,13 @@
 import { dependencyInjectionTokens } from '@data';
+import { EntityName } from '@enums/database';
 import { ICalendarService, IDatabaseContext } from '@interfaces';
 import { inject } from '@shared/decorators';
-import { CalendarEntity } from '../entities';
 
 export class CalendarService implements ICalendarService {
   readonly #databaseContext: IDatabaseContext;
 
-  public async get(id: string) {
-    return this.#databaseContext.get(new CalendarEntity({ id }));
+  public async selectSingle(id: string) {
+    return this.#databaseContext.selectSingle(EntityName.calendar, id);
   }
 
   public constructor(

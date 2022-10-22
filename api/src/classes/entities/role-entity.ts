@@ -10,8 +10,6 @@ export class RoleEntity
   extends BaseEntity<IRoleModel>
   implements Entity<IRoleModel>
 {
-  static values: Readonly<Readonly<Partial<IRoleModel>>[]> = [];
-
   public static seed(): ISeedData<IRoleModel> {
     return {
       values: (Object.keys(Role) as Role[]).map((r) => ({ role: r })),

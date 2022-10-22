@@ -7,7 +7,8 @@ import {
   IUserModel,
   IRoleModel,
   IOrganizationCalendarModel,
-  IOrganizationUserRoleModel
+  IOrganizationUserRoleModel,
+  IUserPasswordModel
 } from '@interfaces';
 
 export type ModelEntityName<T extends IBaseModel> = T extends IUserModel
@@ -24,4 +25,6 @@ export type ModelEntityName<T extends IBaseModel> = T extends IUserModel
   ? EntityName.organizationCalendar
   : T extends IOrganizationUserRoleModel
   ? EntityName.organizationUserRole
+  : T extends IUserPasswordModel
+  ? EntityName.userPassword
   : never;

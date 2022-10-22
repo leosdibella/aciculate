@@ -15,7 +15,19 @@
     "importHelpers": true,
     "paths": {
       "@shared/*": ["../shared/src/*"],
-      "@lib/*": ["../lib/src/*"]
+      "@lib/*": ["../lib/src/*"],
+      "@data/*": ["src/data/*"],
+      "@data": ["src/data/index"],
+      "@enums/*": ["src/enums/*"],
+      "@enums": ["src/enums/index"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@interfaces": ["src/interfaces/index"],
+      "@classes/*": ["src/classes/*"],
+      "@classes": ["src/classes/index"],
+      "@types/*": ["src/types/index/*"],
+      "@types": ["src/types/index"],
+      "@utilities/*": ["src/utilities/index/*"],
+      "@utilities": ["src/utilities/index"]
     },
     "target": "ES2019",
     "typeRoots": ["node_modules/@types"],

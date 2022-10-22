@@ -5,18 +5,18 @@ import {
   IUserService
 } from '@interfaces';
 import { generateHash, generateSalt } from '@utilities';
-import { OrganizationUserRoleEntity, UserEntity } from '@classes/entities';
 import { inject } from '@shared/decorators';
 import { dependencyInjectionTokens } from '@data';
+import { EntityName } from '@enums/database';
 
 export class UserService implements IUserService {
   readonly #databaseContext: IDatabaseContext;
 
-  public async get(id: string) {
-    return this.#databaseContext.get(new UserEntity({ id }));
+  public async selectSingle(id: string) {
+    return this.#databaseContext.selectSingle(EntityName.user, id);
   }
 
-  public async create(request: ICreateUserRequest) {
+  public async insertSingle(request: ICreateUserRequest) {
     const salt = generateSalt();
 
     const userModel: Partial<IUserModel> = {
@@ -28,15 +28,16 @@ export class UserService implements IUserService {
     };
 
     // TODO: Query before inserting
-    const user = await this.#databaseContext.insert(new UserEntity(userModel));
-
-    await this.#databaseContext.insert(
-      new OrganizationUserRoleEntity({
-        organizationId: request.organizationId,
-        roleId: request.roleId,
-        userId: user.id
-      })
+    const user = await this.#databaseContext.insertSingle(
+      EntityName.user,
+      userModel
     );
+
+    await this.#databaseContext.insertSingle(EntityName.organizationUserRole, {
+      organizationId: request.organizationId,
+      roleId: request.roleId,
+      userId: user.id
+    });
 
     return user;
   }

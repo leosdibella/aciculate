@@ -3,6 +3,7 @@ export enum HttpMetadataKey {
   routes = 'routes',
   routePrefix = 'routePrefix',
   requestBody = 'requestBody',
+  authenticate = 'authenticate',
   routeParameter = 'routeParameter',
   queryStringParameter = 'queryStringParameter'
 }

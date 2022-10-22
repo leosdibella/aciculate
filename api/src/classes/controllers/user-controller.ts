@@ -5,7 +5,7 @@ import {
   route,
   routeParameter
 } from '@decorators';
-import { IUserController, IUserModel } from '@interfaces';
+import { IUserController } from '@interfaces';
 import { HttpVerb } from '@shared/enums';
 import { IHttpContext, IUserContext } from '@interfaces/contexts';
 import { ICreateUserRequest, IUserService } from '@interfaces/services';
@@ -19,10 +19,10 @@ export class UserController implements IUserController {
   readonly #userService: IUserService;
 
   @authenticate()
-  @route<IUserController, IUserModel>(HttpVerb.get, '/:id')
-  public async get(@routeParameter('id') id: string) {
+  @route(HttpVerb.get, '/:id')
+  public async selectSingle(@routeParameter('id') id: string) {
     try {
-      const user = await this.#userService.get(id);
+      const user = await this.#userService.selectSingle(id);
 
       return ok(user);
     } catch {
@@ -31,11 +31,13 @@ export class UserController implements IUserController {
     }
   }
 
-  @route<IUserController, IUserModel>(HttpVerb.post, '/create')
+  @route(HttpVerb.post)
   // TODO: Add validator
-  public async create(@requestBody() createUserRequest: ICreateUserRequest) {
+  public async insertSingle(
+    @requestBody() createUserRequest: ICreateUserRequest
+  ) {
     try {
-      const user = await this.#userService.create(createUserRequest);
+      const user = await this.#userService.insertSingle(createUserRequest);
 
       return ok(user);
     } catch {

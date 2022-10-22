@@ -1,10 +1,27 @@
-import { Entity } from '@types';
-import { IBaseModel } from '@interfaces/models';
+import { EntityNameModel } from '@types';
+import { ISelectParameters, ISelectResponse } from '../database';
+import { EntityName } from '@enums/database';
 
 export interface IDatabaseContext {
-  get<T extends IBaseModel>(entity: Entity<T>): Promise<T>;
-  insert<T extends IBaseModel>(entity: Entity<T>): Promise<T>;
-  update<T extends IBaseModel>(entity: Entity<T>): Promise<T>;
-  hardDelete<T extends IBaseModel>(entity: Entity<T>): Promise<void>;
+  selectSingle<T extends EntityName>(
+    entityName: T,
+    id: string
+  ): Promise<EntityNameModel<T>>;
+  selectMany<T extends EntityName>(
+    parameters: ISelectParameters<T>
+  ): Promise<ISelectResponse<T>>;
+  insertSingle<T extends EntityName>(
+    entityName: T,
+    model: Partial<EntityNameModel<T>>
+  ): Promise<EntityNameModel<T>>;
+  updateSingle<T extends EntityName>(
+    entityName: T,
+    model: Partial<EntityNameModel<T>>
+  ): Promise<EntityNameModel<T>>;
+  deleteSingle<T extends EntityName>(
+    entityName: T,
+    id: string,
+    hard?: boolean
+  ): Promise<void>;
   migrate(): Promise<void>;
 }

@@ -11,6 +11,7 @@ import {
   OrganizationCalendarEntity,
   OrganizationUserRoleEntity,
   OrganizationEntity,
+  UserPasswordEntity,
   HttpContext
 } from '@classes';
 import { registry } from '@shared/utilities';
@@ -100,19 +101,17 @@ const _dependencies = Object.freeze<
       CalendarEventController
     ]
   },
-  [DatabaseDependency.databaseEntities]: {
+  [DatabaseDependency.entities]: {
     value: {
       [EntityName.user]: UserEntity,
       [EntityName.role]: RoleEntity,
       [EntityName.calendar]: CalendarEntity,
       [EntityName.organization]: OrganizationEntity,
       [EntityName.calendarEvent]: CalendarEventEntity,
+      [EntityName.userPassword]: UserPasswordEntity,
       [EntityName.organizationCalendar]: OrganizationCalendarEntity,
       [EntityName.organizationUserRole]: OrganizationUserRoleEntity
     }
-  },
-  [DatabaseDependency.seedableEntities]: {
-    value: [EntityName.role, EntityName.user, EntityName.organization]
   }
 });
 

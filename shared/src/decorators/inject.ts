@@ -15,7 +15,6 @@ export function inject(token: symbol, isOptional = false): ParameterDecorator {
     injections.push(
       Object.freeze<IInjection>({
         token,
-        propertyKey,
         parameterIndex,
         isOptional
       })

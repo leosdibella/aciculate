@@ -3,7 +3,6 @@ import {
   ContextName,
   ControllerName,
   DatabaseDependency,
-  EntityName,
   ServiceName
 } from '@enums';
 import {
@@ -16,14 +15,13 @@ import {
   IUserController,
   IOrganizationService,
   IUserService,
-  IEntityConstructor,
   ICalendarService,
   ICalendarController,
   ICalendarEventService,
   ICalendarEventController
 } from '@interfaces';
 import { Constructor } from '@shared/types';
-import { EntityNameModel } from '../database';
+import { Entities } from '../database';
 import { DependencyInjectionTokenKey } from './dependency-injection-token-key';
 
 export type DependencyInjectionTokenValue<
@@ -58,8 +56,6 @@ export type DependencyInjectionTokenValue<
   ? Constructor<ICalendarEventController>
   : T extends ApplicationDependency.controllers
   ? Constructor<IController>[]
-  : T extends DatabaseDependency.databaseEntities
-  ? { [key in EntityName]: IEntityConstructor<EntityNameModel<key>> }
-  : T extends DatabaseDependency.seedableEntities
-  ? EntityName[]
+  : T extends DatabaseDependency.entities
+  ? Entities
   : never;

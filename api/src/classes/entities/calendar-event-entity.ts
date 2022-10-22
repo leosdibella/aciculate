@@ -11,8 +11,8 @@ export class CalendarEventEntity
   extends BaseEntity<ICalendarEventModel>
   implements Entity<ICalendarEventModel>
 {
-  protected readonly _startDate?: Date;
-  protected readonly _endDate?: Date | null;
+  readonly #startDate?: Date;
+  readonly #endDate?: Date | null;
 
   @field({
     type: FieldType.json,
@@ -113,7 +113,7 @@ export class CalendarEventEntity
     type: FieldType.date
   })
   public get startDate() {
-    return this._startDate ? new Date(this._startDate) : this._startDate;
+    return this.#startDate ? new Date(this.#startDate) : undefined;
   }
 
   @field({
@@ -121,7 +121,7 @@ export class CalendarEventEntity
     isNullable: true
   })
   public get endDate() {
-    return this._endDate ? new Date(this._endDate) : this._endDate;
+    return this.#endDate ? new Date(this.#endDate) : this.#endDate;
   }
 
   public constructor(model: Partial<ICalendarEventModel>) {
@@ -132,8 +132,8 @@ export class CalendarEventEntity
     this.description = model.description;
     this.isPrivate = model.isPrivate;
     this.isAllDay = model.isAllDay;
-    this._startDate = model.startDate;
-    this._endDate = model.endDate;
+    this.#startDate = model.startDate;
+    this.#endDate = model.endDate;
     this.startTime = model.startTime;
     this.endTime = model.endTime;
     this.startTimeZone = model.startTimeZone;

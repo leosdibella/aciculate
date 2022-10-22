@@ -9,18 +9,15 @@ import { field, foreignKey, primaryKey, userImmutable } from '@decorators';
 import { databaseMetadataKeys } from '@data/database-metadata-keys';
 
 export abstract class BaseEntity<T extends IBaseModel> {
-  protected readonly _createdDate?: Date;
-  protected readonly _updatedDate?: Date;
+  private static _schema?: unknown;
+  private static _entityName?: unknown;
+  private static _userImmutableFields?: unknown;
+  private static _primaryKey?: unknown;
+  private static _foreignKeys?: unknown;
 
-  #schema?: Readonly<EntitySchema<T>>;
-  #name?: ModelEntityName<T>;
-  #userImmutableFields?: Readonly<Extract<keyof T, string>[]>;
-  #primaryKey?: Extract<keyof T, string>;
-  #foreignKeys?: Readonly<
-    Partial<Record<Extract<keyof T, string>, Readonly<IForeignKey>>>
-  >;
+  readonly #createdDate?: Date;
+  readonly #updatedDate?: Date;
 
-  //defaultValue: 'uuid_generate_v4()'
   @field({
     type: FieldType.uuid
   })
@@ -51,24 +48,25 @@ export abstract class BaseEntity<T extends IBaseModel> {
   @userImmutable
   public readonly updatedBy?: string;
 
-  //defaultValue: 'now()'
   @field({
     type: FieldType.timestamptz
   })
   public get createdDate() {
-    return this._createdDate ? new Date(this._createdDate) : undefined;
+    return this.#createdDate ? new Date(this.#createdDate) : undefined;
   }
 
   @field({
     type: FieldType.timestamptz
   })
   public get updatedDate() {
-    return this._updatedDate ? new Date(this._updatedDate) : undefined;
+    return this.#updatedDate ? new Date(this.#updatedDate) : undefined;
   }
 
-  public get userImmutableFields(): Readonly<Extract<keyof T, string>[]> {
-    if (!this.#userImmutableFields) {
-      this.#userImmutableFields = Object.freeze<Extract<keyof T, string>>(
+  public static userImmutableFields<T extends IBaseModel>(): Readonly<
+    Extract<keyof T, string>[]
+  > {
+    if (!this._userImmutableFields) {
+      this._userImmutableFields = Object.freeze<Extract<keyof T, string>>(
         Reflect.getMetadata(
           databaseMetadataKeys.userImmutable,
           this.constructor.prototype
@@ -76,26 +74,26 @@ export abstract class BaseEntity<T extends IBaseModel> {
       );
     }
 
-    return this.#userImmutableFields!;
+    return this._userImmutableFields as Readonly<Extract<keyof T, string>[]>;
   }
 
-  public get primaryKey(): Extract<keyof T, string> {
-    if (!this.#primaryKey) {
-      this.#primaryKey =
+  public static primaryKey<T extends IBaseModel>(): Extract<keyof T, string> {
+    if (!this._primaryKey) {
+      this._primaryKey =
         Reflect.getMetadata(
           databaseMetadataKeys.primaryKey,
           this.constructor.prototype
         ) ?? 'id';
     }
 
-    return this.#primaryKey!;
+    return this._primaryKey as Extract<keyof T, string>;
   }
 
-  public get foreignKeys(): Partial<
+  public static foreignKeys<T extends IBaseModel>(): Partial<
     Record<Extract<keyof T, string>, Readonly<IForeignKey>>
   > {
-    if (!this.#foreignKeys) {
-      this.#foreignKeys = Object.freeze<
+    if (!this._foreignKeys) {
+      this._foreignKeys = Object.freeze<
         Partial<Record<Extract<keyof T, string>, Readonly<IForeignKey>>>
       >(
         (Reflect.getMetadata(
@@ -107,12 +105,14 @@ export abstract class BaseEntity<T extends IBaseModel> {
       );
     }
 
-    return this.#foreignKeys!;
+    return this._foreignKeys as Partial<
+      Record<Extract<keyof T, string>, Readonly<IForeignKey>>
+    >;
   }
 
-  public get schema(): EntitySchema<T> {
-    if (!this.#schema) {
-      this.#schema = Object.freeze<EntitySchema<T>>(
+  public static schema<T extends IBaseModel>(): EntitySchema<T> {
+    if (!this._schema) {
+      this._schema = Object.freeze<EntitySchema<T>>(
         (Reflect.getMetadata(
           databaseMetadataKeys.field,
           this.constructor.prototype
@@ -120,23 +120,23 @@ export abstract class BaseEntity<T extends IBaseModel> {
       );
     }
 
-    return this.#schema!;
+    return this._schema as EntitySchema<T>;
   }
 
-  public get name(): ModelEntityName<T> {
-    if (!this.#name) {
-      this.#name = Reflect.getMetadata(
+  public static entityName<T extends IBaseModel>(): ModelEntityName<T> {
+    if (!this._entityName) {
+      this._entityName = Reflect.getMetadata(
         databaseMetadataKeys.entity,
         this.constructor
       );
     }
 
-    return this.#name!;
+    return this._entityName as ModelEntityName<T>;
   }
 
   public toModel(): T {
-    const schema = this.schema;
-    const entityName = this.name;
+    const schema = BaseEntity.schema<T>();
+    const entityName = BaseEntity.entityName();
     const errors: IApiError[] = [];
     const model: Partial<T> = {};
 
@@ -177,9 +177,9 @@ export abstract class BaseEntity<T extends IBaseModel> {
     return JSON.stringify(this.toModel());
   }
 
-  public fromJson(serialized: string): Partial<T> {
-    const schema = this.schema;
-    const entityName = this.name;
+  public static fromJson<T extends IBaseModel>(serialized: string): Partial<T> {
+    const schema = BaseEntity.schema<T>();
+    const entityName = BaseEntity.entityName();
     const apiErrors: IApiError[] = [];
     let json: Record<string, unknown> = {};
 
@@ -297,8 +297,8 @@ export abstract class BaseEntity<T extends IBaseModel> {
   public constructor(model: Partial<IBaseModel>) {
     this.id = model.id;
     this.deleted = model.deleted;
-    this._createdDate = sanitizeDate(model.createdDate);
-    this._updatedDate = sanitizeDate(model.updatedDate);
+    this.#createdDate = sanitizeDate(model.createdDate);
+    this.#updatedDate = sanitizeDate(model.updatedDate);
     this.createdBy = model.createdBy;
     this.updatedBy = model.updatedBy;
   }

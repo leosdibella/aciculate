@@ -1,58 +1,29 @@
-import { RoleEntity } from '@classes/entities';
+import { httpMetadataKeys } from '@data';
 import { IController } from '@interfaces/controllers';
-import { ApiError } from '@shared/classes';
-import { ApiErrorCode, HttpStatusCode, Role } from '@shared/enums';
+import { Role } from '@shared/enums';
 
 export function authenticate<T extends IController>(
-  roles?: Role[]
+  roles: Role[] = []
 ): MethodDecorator {
   return function authenticateDecorator(
     target: T,
-    propertyKey: string,
+    propertyKey: Extract<keyof T, string>,
     descriptor: PropertyDescriptor
   ) {
-    const originalMethod = descriptor.value as (
-      ...parameters: unknown[]
-    ) => unknown;
+    const authenticationDictionary: Partial<
+      Record<Extract<keyof T, string>, Readonly<Role[]>>
+    > =
+      Reflect.getMetadata(httpMetadataKeys.authenticate, target.constructor) ??
+      {};
 
-    const authenticatedMethod = function authenticatedMethod(
-      ...parameters: unknown[]
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-invalid-this, @typescript-eslint/no-this-alias
-      const controllerInstance = this as IController;
+    authenticationDictionary[propertyKey] = Object.freeze<Role[]>(roles);
 
-      if (!controllerInstance.userContext) {
-        controllerInstance.httpContext.sendResponse({
-          httpStatusCode:
-            controllerInstance.userContext === null
-              ? HttpStatusCode.forbidden
-              : HttpStatusCode.unauthorized,
-          response:
-            target.userContext === null
-              ? 'Missing authentication token'
-              : 'Invalid authentication token'
-        });
-      } else if (roles) {
-        const role = RoleEntity.values.find(
-          (r) => r.id === target.userContext!.roleId
-        );
+    Reflect.defineMetadata(
+      httpMetadataKeys.authenticate,
+      authenticationDictionary,
+      target.constructor
+    );
 
-        if (!role || roles.indexOf(role.role!) === -1) {
-          target.httpContext.sendResponse({
-            httpStatusCode: HttpStatusCode.forbidden,
-            response: new ApiError([
-              {
-                errorCode: ApiErrorCode.insufficientPermissionsError,
-                message: `A role belonging to the set [${roles.join()}] is required to perform this operation.`
-              }
-            ])
-          });
-        }
-      } else {
-        return originalMethod.apply(controllerInstance, parameters);
-      }
-    };
-
-    descriptor.value = authenticatedMethod;
+    return descriptor;
   };
 }

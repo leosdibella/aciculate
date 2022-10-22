@@ -41,6 +41,12 @@ export class OrganizationEntity
   })
   public readonly description?: string | null;
 
+  @field({
+    type: FieldType.uuid,
+    defaultValue: 'uuid_generate_v4()'
+  })
+  public readonly signature?: string;
+
   public readonly users: Readonly<Readonly<IUserModel>[]>;
 
   public constructor(model: Partial<IOrganizationModel>) {

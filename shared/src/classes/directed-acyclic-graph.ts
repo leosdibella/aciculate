@@ -4,7 +4,7 @@ import { ApiErrorCode } from '../enums';
 
 export class DirectedAcyclicGraph<T = unknown> {
   readonly #allowDuplicateVertexValues: boolean = false;
-  readonly #verify: boolean = false;
+  readonly #shouldVerify: boolean = false;
   readonly #edges: number[][] = [];
   readonly #vertices: Readonly<IVertex<T>>[] = [];
   readonly #vertexToString: (vertex: T) => string;
@@ -53,29 +53,38 @@ export class DirectedAcyclicGraph<T = unknown> {
     this.#topologicallySorted = Object.freeze<T[]>(topologicallySorted);
   }
 
-  #verifyAcyclic(startingVertexIndex: number) {
-    const visitedVertexIndices: Record<number, boolean> = {
-      [startingVertexIndex]: true
+  #verify(startingVertexIndex: number) {
+    let currentVisitingIndex = 0;
+
+    const visitedVertexIndices: Record<number, number> = {
+      [startingVertexIndex]: currentVisitingIndex
     };
 
-    const edges = this.#edges[startingVertexIndex];
+    const edges = [...this.#edges[startingVertexIndex]];
 
     while (edges.length) {
       const vertexIndex = edges.pop()!;
 
       if (visitedVertexIndices[vertexIndex] !== undefined) {
+        const circularDependency = [
+          ...Object.keys(visitedVertexIndices)
+            .map((k) => +k)
+            .sort((a, b) =>
+              visitedVertexIndices[a] > visitedVertexIndices[b] ? 1 : -1
+            ),
+          startingVertexIndex
+        ]
+          .map((vi) => this.#vertexToString(this.#vertices[vi].value))
+          .join(' -> ');
+
         throw new ApiError([
           {
             errorCode: ApiErrorCode.circularDependency,
-            message: `Circular dependency detected at ${this.#vertexToString(
-              this.#vertices[vertexIndex].value
-            )} originating from ${this.#vertexToString(
-              this.#vertices[startingVertexIndex].value
-            )}`
+            message: `Circular dependency detected: ${circularDependency}`
           }
         ]);
       } else {
-        visitedVertexIndices[vertexIndex] = true;
+        visitedVertexIndices[vertexIndex] = ++currentVisitingIndex;
 
         this.#edges[vertexIndex].forEach((vertex) => {
           edges.push(vertex);
@@ -133,8 +142,8 @@ export class DirectedAcyclicGraph<T = unknown> {
       this.#edges[fromVertexIndex].push(toVertexIndex);
       this.#topologicallySorted = [];
 
-      if (this.#verify) {
-        this.#verifyAcyclic(fromVertexIndex);
+      if (this.#shouldVerify) {
+        this.#verify(fromVertexIndex);
       }
     }
   }
@@ -155,12 +164,12 @@ export class DirectedAcyclicGraph<T = unknown> {
   }
 
   public constructor(parameters: {
-    verify?: boolean;
+    shouldVerify?: boolean;
     vertexToString?(vertex: T): string;
     allowDuplicateVertexValues?: boolean;
     areEqualVertices?(vertex1: T, vertex2: T): boolean;
   }) {
-    this.#verify = parameters.verify ?? false;
+    this.#shouldVerify = parameters.shouldVerify ?? false;
 
     this.#allowDuplicateVertexValues =
       parameters.allowDuplicateVertexValues ?? false;

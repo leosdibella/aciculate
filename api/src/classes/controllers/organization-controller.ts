@@ -5,8 +5,7 @@ import {
   IOrganizationService,
   IOrganizationController,
   IUserContext,
-  IHttpContext,
-  IOrganizationModel
+  IHttpContext
 } from '@interfaces';
 import { inject } from '@shared/decorators';
 import { HttpVerb } from '@shared/enums';
@@ -17,10 +16,10 @@ export class OrganizationController implements IOrganizationController {
   readonly #organizationService: IOrganizationService;
 
   @authenticate()
-  @route<IOrganizationController, IOrganizationModel>(HttpVerb.get, '/:id')
-  public async get(@routeParameter('id') id: string) {
+  @route(HttpVerb.get, '/:id')
+  public async selectSingle(@routeParameter('id') id: string) {
     try {
-      const organization = await this.#organizationService.get(id);
+      const organization = await this.#organizationService.selectSingle(id);
 
       return ok(organization);
     } catch {

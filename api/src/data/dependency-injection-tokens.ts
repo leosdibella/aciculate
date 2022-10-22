@@ -15,8 +15,7 @@ const applicationContext = Symbol('applicationContext');
 const userContext = Symbol('userContext');
 const httpContext = Symbol('httpContext');
 const controllers = Symbol('controllers');
-const databaseEntities = Symbol('databaseEntities');
-const seedableEntities = Symbol('seedableEntities');
+const entities = Symbol('entities');
 
 export const dependencyInjectionTokens = Object.freeze<
   Record<DependencyInjectionTokenKey, symbol>
@@ -35,7 +34,6 @@ export const dependencyInjectionTokens = Object.freeze<
   userContext,
   httpContext,
   databaseContext,
-  seedableEntities,
-  databaseEntities,
+  entities,
   controllers
 });

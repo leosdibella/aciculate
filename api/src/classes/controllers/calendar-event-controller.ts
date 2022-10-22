@@ -3,7 +3,6 @@ import { authenticate, controller, route, routeParameter } from '@decorators';
 import { ControllerName } from '@enums';
 import {
   ICalendarEventController,
-  ICalendarEventModel,
   ICalendarEventService,
   IHttpContext,
   IUserContext
@@ -17,10 +16,10 @@ export class CalendarEventController implements ICalendarEventController {
   readonly #calendarEventService: ICalendarEventService;
 
   @authenticate()
-  @route<ICalendarEventController, ICalendarEventModel>(HttpVerb.get, '/:id')
-  public async get(@routeParameter('id') id: string) {
+  @route(HttpVerb.get, '/:id')
+  public async selectSingle(@routeParameter('id') id: string) {
     try {
-      const calendarEvent = await this.#calendarEventService.get(id);
+      const calendarEvent = await this.#calendarEventService.selectSingle(id);
 
       return ok(calendarEvent);
     } catch {
@@ -30,10 +29,10 @@ export class CalendarEventController implements ICalendarEventController {
   }
 
   @authenticate()
-  @route<ICalendarEventController, ICalendarEventModel>(HttpVerb.post)
-  public async create() {
+  @route(HttpVerb.post)
+  public async insertSingle() {
     try {
-      const calendarEvent = await this.#calendarEventService.create();
+      const calendarEvent = await this.#calendarEventService.insertSingle();
 
       return ok(calendarEvent);
     } catch {
