@@ -1,6 +1,6 @@
-import { IValueType } from './value-type';
+import { ValueTypeValue } from '../types';
 
-export interface IMemberType<T = unknown> {
+export interface IMemberType {
   name: string;
-  value: IValueType<T>;
+  value: ValueTypeValue;
 }

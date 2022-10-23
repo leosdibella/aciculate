@@ -34,7 +34,7 @@ A lot. Most things are built from scratch, just for fun / challenge.
         - Built on top of Native Web Components
     8. UI Component Library
         - Themeable using CSS variables + public API
-    9. Custom JSON Serialize / Deserialize methods (AJSON)
+    9. Custom JSON Serialize / Deserialize (lexer + parser) methods (AJSON = Aciculate JSON)
         - Supports Dates more elegantly
         - Supports circular references
         - Supports BigInt
