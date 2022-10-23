@@ -7,3 +7,5 @@ export * from './registry';
 export * from './injection';
 export * from './dependency';
 export * from './vertex';
+export * from './value-type';
+export * from './member-type';
