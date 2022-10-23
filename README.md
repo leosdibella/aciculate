@@ -17,35 +17,35 @@ So what all's in here then?
 A lot. Most things are built from scratch, just for fun / challenge.
 
 1. General Purpose + AOP
-  1. Dependency Injection Framework
-      - Using decorators + reflect-metadata to mark dependencies with Symbol tokens
-      - Build a Directed Acyclic Graph based on the dependency chain and topologically sort it
-      - Construct the depdency chain from the bottom up
-  2. Backend HTTP Controller Framework
-      - Using decorators + reflect-metadata + Depdendency Injection Framework
-      - Consumes an HTTP Context
-        - HTTP Request object
-        - A method for creating an HTTP Response
-  3. Backend Logging
-  4. Frontend Logging
-  5. Database ORM
-  6. Frontend Router
-  7. Frontend Framework
-      - Built on top of Native Web Components
-  8. UI Component Library
-      - Themeable using CSS variables + public API
-  9. Custom JSON Serialize / Deserialize methods (AJSON)
-      - Supports Dates more elegantly
-      - Supports circular references
-      - Supports BigInt
-      - Supports NaN
-      - Supports Infinity
-      - Supports undefined
-  10. Generic JavaScript Utilities
-      - Deep Copy
-      - Deep Equals
-      - Directed Acyclic Graph
-      - etc
+    1. Dependency Injection Framework
+        - Using decorators + reflect-metadata to mark dependencies with Symbol tokens
+        - Build a Directed Acyclic Graph based on the dependency chain and topologically sort it
+        - Construct the depdency chain from the bottom up
+    2. Backend HTTP Controller Framework
+        - Using decorators + reflect-metadata + Depdendency Injection Framework
+        - Consumes an HTTP Context
+            - HTTP Request object
+            - A method for creating an HTTP Response
+    3. Backend Logging
+    4. Frontend Logging
+    5. Database ORM
+    6. Frontend Router
+    7. Frontend Framework
+        - Built on top of Native Web Components
+    8. UI Component Library
+        - Themeable using CSS variables + public API
+    9. Custom JSON Serialize / Deserialize methods (AJSON)
+        - Supports Dates more elegantly
+        - Supports circular references
+        - Supports BigInt
+        - Supports NaN
+        - Supports Infinity
+        - Supports undefined
+    10. Generic JavaScript Utilities
+        - Deep Copy
+        - Deep Equals
+        - Directed Acyclic Graph
+        - etc
 2. Authentication API
     - Signs JWTs with a secret per user
     - Tokens can be revoked at the followings levels
