@@ -1,3 +1,5 @@
 export * from './constructor';
 export * from './reference-type';
-export * from './value-type-value';
+export * from './type-value';
+export * from './reference-type-value';
+export * from './primitive-type-value';

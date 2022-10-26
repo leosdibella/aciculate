@@ -8,4 +8,4 @@ export * from './organization-user-role-model';
 export * from './user-model';
 export * from './role-model';
 export * from './user-password-model';
-export * from './server-model';
+export * from './system-model';

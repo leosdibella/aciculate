@@ -4,7 +4,7 @@ export class ApiError extends Error {
   readonly #apiErrors: readonly Readonly<IApiError>[];
 
   public get errors() {
-    return [...this.#apiErrors];
+    return this.#apiErrors;
   }
 
   public merge(apiError: ApiError) {

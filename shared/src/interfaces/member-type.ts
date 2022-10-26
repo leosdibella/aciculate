@@ -1,6 +1,6 @@
-import { ValueTypeValue } from '../types';
+import { TypeValue } from '../types';
 
 export interface IMemberType {
-  name: string;
-  value: ValueTypeValue;
+  readonly name: string;
+  value?: TypeValue;
 }

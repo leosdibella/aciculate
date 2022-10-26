@@ -175,10 +175,15 @@ export function controller<T extends ControllerName>(controllerName: T) {
             const action = async (request: Request, response: Response) => {
               let userContext: IUserContext | undefined | null;
               const token = request.headers.authorization?.split(' ')[1];
-              const tokenSecret = request.headers['X-Aciculate-Token-Secret'];
+              const xTokenSecret = request.headers['X-Aciculate-Token-Secret'];
+
+              const tokenSecret =
+                (Array.isArray(xTokenSecret)
+                  ? xTokenSecret[0]
+                  : xTokenSecret) ?? '';
 
               try {
-                userContext = await decodeJwt(token);
+                userContext = await decodeJwt(tokenSecret, token);
               } catch (e: unknown) {
                 if (e !== undefined) {
                   userContext = null;

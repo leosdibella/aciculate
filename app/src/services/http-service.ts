@@ -1,3 +1,4 @@
+import { HttpError } from '@classes/http-error';
 import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
 import { IHttpRequest, IHttpService, IHttpSimpleRequest } from '@interfaces';
 import { ApiError } from '@shared/classes';
@@ -70,25 +71,18 @@ export class HttpService implements IHttpService {
       const data = (await response.json()) as S;
 
       if (response.status !== HttpStatusCode.success) {
-        if (Array.isArray(data)) {
-          throw new ApiError(data);
-        } else {
-          throw new ApiError([
-            {
-              errorCode: ApiErrorCode.
-            }
-          ]);
-        }
+        throw new HttpError(response.status, data);
       }
 
       return data;
     } catch (e: unknown) {
-      if (e instanceof ApiError) {
+      if (e instanceof HttpError) {
         throw e;
       } else {
         throw new ApiError([
           {
-
+            errorCode: ApiErrorCode.unexpectedHttpFailure,
+            message: `${e}`
           }
         ]);
       }

@@ -1,7 +1,7 @@
 export enum EntityName {
   user = 'user',
   role = 'role',
-  server = 'server',
+  system = 'system',
   calendar = 'calendar',
   userPassword = 'userPassword',
   organization = 'organization',

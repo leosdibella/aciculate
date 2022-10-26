@@ -7,3 +7,4 @@ export * from './calendar-event-entity';
 export * from './organization-calendar-entity';
 export * from './organization-user-role-entity';
 export * from './user-password-entity';
+export * from './system-entity';

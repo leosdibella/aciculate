@@ -3,6 +3,7 @@ export enum ApiErrorCode {
   databaseUpdateError = 'databaseUpdateError',
   databaseLookupError = 'databaseLookupError',
   databaseDeleteError = 'databaseDeleteError',
+  unexpectedHttpFailure = 'unexpectedHttpFailure',
   datbaseSchemaConfigurationError = 'datbaseSchemaConfigurationError',
   databseSchemaValidationError = 'databseSchemaValidationError',
   databaseOptimisticConcurencyError = 'databaseOptimisticConcurencyError',

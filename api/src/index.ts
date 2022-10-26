@@ -12,7 +12,8 @@ import {
   OrganizationUserRoleEntity,
   OrganizationEntity,
   UserPasswordEntity,
-  HttpContext
+  HttpContext,
+  SystemEntity
 } from '@classes';
 import { registry } from '@shared/utilities';
 import { IRegistryValue } from '@shared/interfaces';
@@ -110,7 +111,8 @@ const _dependencies = Object.freeze<
       [EntityName.calendarEvent]: CalendarEventEntity,
       [EntityName.userPassword]: UserPasswordEntity,
       [EntityName.organizationCalendar]: OrganizationCalendarEntity,
-      [EntityName.organizationUserRole]: OrganizationUserRoleEntity
+      [EntityName.organizationUserRole]: OrganizationUserRoleEntity,
+      [EntityName.system]: SystemEntity
     }
   }
 });
