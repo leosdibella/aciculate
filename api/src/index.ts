@@ -13,17 +13,17 @@ import {
   OrganizationEntity,
   UserPasswordEntity,
   HttpContext,
-  SystemEntity
+  SystemEntity,
+  CalendarController,
+  CalendarEventController,
+  OrganizationController,
+  UserController,
+  AuthenticationController
 } from '@classes';
 import { registry } from '@shared/utilities';
 import { IRegistryValue } from '@shared/interfaces';
 import {
-  CalendarController,
-  CalendarEventController,
-  OrganizationController,
-  UserController
-} from '@classes/controllers';
-import {
+  AuthenticationService,
   CalendarEventService,
   CalendarService,
   OrganizationService,
@@ -78,6 +78,10 @@ const _dependencies = Object.freeze<
     value: OrganizationService,
     isConstructor: true
   },
+  [ServiceName.authenticationService]: {
+    value: AuthenticationService,
+    isConstructor: true
+  },
   [ControllerName.userController]: {
     value: UserController,
     isConstructor: true
@@ -94,12 +98,17 @@ const _dependencies = Object.freeze<
     value: OrganizationController,
     isConstructor: true
   },
+  [ControllerName.authenticationController]: {
+    value: AuthenticationController,
+    isConstructor: true
+  },
   [ApplicationDependency.controllers]: {
     value: [
       UserController,
       CalendarController,
       OrganizationController,
-      CalendarEventController
+      CalendarEventController,
+      AuthenticationController
     ]
   },
   [DatabaseDependency.entities]: {

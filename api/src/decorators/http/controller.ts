@@ -1,7 +1,9 @@
 import { httpMetadataKeys, dependencyInjectionTokens } from '@data';
-import { IDatabaseContext, IUserContext } from '@interfaces/contexts';
-import { IController, IControllerRoute } from '@interfaces/controllers';
 import {
+  IDatabaseContext,
+  IUserContext,
+  IController,
+  IControllerRoute,
   IHttpResponse,
   IQueryStringParameterMetadata,
   IRequestBodyMetadata,

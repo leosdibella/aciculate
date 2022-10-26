@@ -142,16 +142,6 @@ export abstract class BaseEntity<T extends IBaseModel> {
 
     (Object.keys(schema) as Extract<keyof this & keyof T, string>[]).forEach(
       (k) => {
-        const entityField = schema[k];
-
-        if (
-          typeof field === 'object' &&
-          !Array.isArray(field) &&
-          (entityField as Field).isSecured
-        ) {
-          return;
-        }
-
         if (this[k] === undefined) {
           errors.push({
             errorCode: ApiErrorCode.databseSchemaValidationError,
@@ -210,10 +200,6 @@ export abstract class BaseEntity<T extends IBaseModel> {
       .forEach((cn) => {
         const entityField = schema[cn] as Field;
         const value = json[cn];
-
-        if (entityField.isSecured) {
-          return;
-        }
 
         if (entityField.type === FieldType.smallint) {
           if (

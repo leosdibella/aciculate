@@ -7,6 +7,5 @@ export interface IUuidField extends IField {
   readonly maxLength?: never;
   readonly minLength?: never;
   readonly isNullable?: true;
-  readonly isSecured?: true;
   readonly validate?: never;
 }

@@ -6,9 +6,11 @@ const userController = Symbol('userController');
 const calendarController = Symbol('calendarController');
 const organizationController = Symbol('organizationController');
 const calendarEventController = Symbol('calendarEventController');
+const authenticationController = Symbol('authenticationController');
 const userService = Symbol('userService');
 const organizationService = Symbol('organizationService');
 const calendarEventService = Symbol('calendarEventService');
+const authenticationService = Symbol('authenticationService');
 const calendarService = Symbol('calendarService');
 const databaseContext = Symbol('databaseContext');
 const applicationContext = Symbol('applicationContext');
@@ -26,10 +28,12 @@ export const dependencyInjectionTokens = Object.freeze<
   calendarService,
   organizationService,
   calendarEventService,
+  authenticationService,
   userController,
   calendarController,
   organizationController,
   calendarEventController,
+  authenticationController,
   applicationContext,
   userContext,
   httpContext,

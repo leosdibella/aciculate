@@ -1,5 +1,5 @@
 import { httpMetadataKeys } from '@data';
-import { IController } from '@interfaces/controllers';
+import { IController } from '@interfaces';
 import { Role } from '@shared/enums';
 
 export function authenticate<T extends IController>(

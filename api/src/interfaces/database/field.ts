@@ -6,6 +6,5 @@ export interface IField {
   readonly maxLength?: number;
   readonly minLength?: number;
   readonly isNullable?: true;
-  readonly isSecured?: true;
   validate?(value: unknown): void;
 }

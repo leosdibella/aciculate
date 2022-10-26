@@ -530,7 +530,7 @@ function _appendReferenceTypeValue(
   };
 }
 
-function _lexKeyword(text: string, index: number) {
+function _lexKeywordTypeValue(text: string, index: number) {
   let value = '';
 
   for (let i = index; i < text.length; ++i) {
@@ -563,7 +563,7 @@ function _lexKeyword(text: string, index: number) {
   }
 }
 
-function _lexDelimitedType(
+function _lexDelimitedTypeValue(
   text: string,
   index: number,
   delimiter: string,
@@ -781,7 +781,7 @@ function _lex(text: string): TypeValue {
           space
         });
 
-        const { lastCharacterIndex, typeValue } = _lexDelimitedType(
+        const { lastCharacterIndex, typeValue } = _lexDelimitedTypeValue(
           text,
           index,
           character,
@@ -814,7 +814,7 @@ function _lex(text: string): TypeValue {
           space
         });
 
-        const lexedKeyword = _lexKeyword(text, index);
+        const lexedKeyword = _lexKeywordTypeValue(text, index);
 
         const keywordResult = _appendPrimitiveTypeValue(
           text,
@@ -869,13 +869,17 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
     case ValueType.bigint:
     case ValueType.number:
     case ValueType.boolean:
-    case ValueType.undefined:
-    case ValueType.referencePath: {
+    case ValueType.undefined: {
       return typeValue.value;
     }
+    case ValueType.referencePath: {
+      return typeValue.value.resolvedValue;
+    }
     case ValueType.array: {
-      const reference: ReferenceType = [];
+      const reference: unknown[] = [];
       const elements = typeValue.value;
+
+      typeValue.resolvedValue = reference;
 
       for (let i = 0; i < elements.length; ++i) {
         reference.push(_parse(elements[i], rootReference ?? reference));
@@ -884,8 +888,10 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
       return reference;
     }
     case ValueType.object: {
-      const reference: ReferenceType = {};
+      const reference: Record<string, unknown> = {};
       const members = typeValue.value;
+
+      typeValue.resolvedValue = reference;
 
       for (let i = 0; i < members.length; ++i) {
         const memberValue = members[i].value;

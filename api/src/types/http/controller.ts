@@ -1,5 +1,6 @@
 import { ControllerName } from '@enums';
 import {
+  IAuthenticationController,
   ICalendarController,
   ICalendarEventController,
   IOrganizationController,
@@ -15,4 +16,6 @@ export type Controller<T extends ControllerName> =
     ? ICalendarController
     : T extends ControllerName.calendarEventController
     ? ICalendarEventController
+    : T extends ControllerName.authenticationController
+    ? IAuthenticationController
     : never;

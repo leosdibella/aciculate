@@ -1,6 +1,5 @@
 import { httpMetadataKeys } from '@data';
-import { IController } from '@interfaces/controllers';
-import { IRouteMetdata } from '@interfaces/metadata';
+import { IController, IRouteMetdata } from '@interfaces';
 import { HttpVerb } from '@shared/enums';
 
 export function route<T extends IController>(

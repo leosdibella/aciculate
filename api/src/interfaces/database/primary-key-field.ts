@@ -7,6 +7,5 @@ export interface IPrimaryKeyField extends IField {
   readonly maxLength?: never;
   readonly minLength?: never;
   readonly isNullable?: never;
-  readonly isSecured?: true;
   readonly validate?: never;
 }

@@ -46,11 +46,14 @@ export async function decodeJwt(
           if (err) {
             reject(err);
           } else {
-            const {
-
-            }
-
-            resolve(userContext);
+            resolve({
+              userId: payload.userId,
+              roleId: payload.roleId,
+              organizationId: payload.organizationId,
+              organizationSignature: payload.organizationSignature,
+              applicationSignature: payload.applicationSignature,
+              organizationIds: payload.organizationIds
+            });
           }
         }
       );

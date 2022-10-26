@@ -7,6 +7,5 @@ export interface ISmallIntegerField extends IField {
   readonly minLength?: number;
   readonly isNullable?: true;
   readonly defaultValue?: number;
-  readonly isSecured?: true;
   validate?(value: number): void;
 }

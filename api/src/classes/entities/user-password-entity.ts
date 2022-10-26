@@ -20,18 +20,16 @@ export class UserPasswordEntity
   @field({
     type: FieldType.varchar,
     minLength: 1,
-    maxLength: 1024,
-    isSecured: true
+    maxLength: 1024
   })
-  public readonly passwordHash?: string;
+  public readonly hash?: string;
 
   @field({
     type: FieldType.varchar,
     minLength: 1,
-    maxLength: 1024,
-    isSecured: true
+    maxLength: 1024
   })
-  public readonly passwordSalt?: string;
+  public readonly salt?: string;
 
   @field({
     type: FieldType.timestamptz
@@ -44,12 +42,17 @@ export class UserPasswordEntity
   })
   public readonly signature?: string;
 
+  @field({
+    type: FieldType.uuid
+  })
+  public readonly 
+
   public constructor(model: Partial<IUserPasswordModel>) {
     super(model);
 
     this.userId = model.userId;
-    this.passwordHash = model.passwordHash;
-    this.passwordSalt = model.passwordSalt;
+    this.hash = model.hash;
+    this.salt = model.salt;
     this.lastLoginDate = model.lastLoginDate;
     this.signature = model.signature;
   }
