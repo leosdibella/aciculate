@@ -8,6 +8,7 @@ export interface IUserModel extends IBaseModel {
   readonly email: string;
   readonly profileImage: string | null;
   readonly defaulyOrganizationId: string | null;
+  readonly signature: Date;
   readonly organizations: Readonly<Readonly<IOrganizationModel[]>> | null;
   readonly calendars: Readonly<Readonly<ICalendarModel>[]> | null;
 }

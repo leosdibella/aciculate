@@ -20,7 +20,6 @@ const _tokens = Object.freeze({
   boolean: Object.freeze([`${true}`, `${false}`]),
   delimiters: Object.freeze({
     string: '"',
-    referencePath: '/',
     bigInt: 'n',
     date: '@'
   }),
@@ -41,7 +40,8 @@ const _tokens = Object.freeze({
   }),
   separators: Object.freeze({
     name: ':',
-    value: ','
+    value: ',',
+    referencePath: '/'
   }),
   whitespace: Object.freeze({
     space: ' ',
@@ -66,6 +66,187 @@ const _numberTokens = Object.freeze([
   ..._tokens.number.signs,
   ..._tokens.number.digits
 ]);
+
+const _rootReferencePath = `${_tokens.separators.referencePath}${_tokens.separators.referencePath}`;
+
+function _isReferenceType(value: unknown) {
+  return value && (Array.isArray(value) || typeof value === 'object');
+}
+
+function _extendReferencePath(referencePath: string, value: string) {
+  if (referencePath === _rootReferencePath) {
+    return `${_tokens.separators.referencePath}${JSON.stringify(value)}${
+      _tokens.separators.referencePath
+    }`;
+  }
+
+  return `${referencePath}${JSON.stringify(value)}${
+    _tokens.separators.referencePath
+  }`;
+}
+
+const _serialize = Object.freeze({
+  bigint: (value: bigint) =>
+    `${_tokens.delimiters.bigInt}${value}${_tokens.delimiters.bigInt}`,
+  string: (value: string) => JSON.stringify(value),
+  number: (value: number) => `${value}`,
+  symbol: () => undefined,
+  function: () => undefined,
+  undefined: () => _tokens.undefined,
+  boolean: (value: boolean) => `${value}`,
+  date(value: Date, location?: string) {
+    const time = value.getTime();
+
+    if (isNaN(time)) {
+      const errorPath = location ? ` at location: ${location}` : '';
+
+      throw new AjsonError(
+        `invalid date${errorPath}`,
+        AjsonMethod.serialize,
+        AjsonErrorCode.invalidDate
+      );
+    }
+
+    return `${_tokens.delimiters.date}${JSON.stringify(value)}`;
+  },
+  object(
+    value: ReferenceType,
+    referencePaths: Map<ReferenceType, string>,
+    location?: string
+  ) {
+    const referencePath = referencePaths.get(value as ReferenceType);
+
+    if (Array.isArray(value)) {
+      return (
+        referencePath ??
+        _serialize.arrayExtension(
+          value,
+          referencePaths,
+          location ?? _rootReferencePath
+        )
+      );
+    } else {
+      return (
+        referencePath ??
+        _serialize.objectExtension(
+          value as Record<string, unknown>,
+          referencePaths,
+          location ?? _rootReferencePath
+        )
+      );
+    }
+  },
+  objectExtension(
+    value: Record<string, unknown>,
+    referencePaths: Map<ReferenceType, string>,
+    location: string
+  ) {
+    return `{${Object.keys(value)
+      .map((key) => ({
+        key,
+        value: _serialize.unknown(
+          value[key],
+          referencePaths,
+          _extendReferencePath(location, key)
+        )
+      }))
+      .filter((p) => p.value !== undefined)
+      .map((p) => `${_serialize.string(p.key)}:${p.value}`)
+      .join()}}`;
+  },
+  arrayExtension(
+    value: unknown[],
+    referencePaths: Map<ReferenceType, string>,
+    location: string
+  ) {
+    return `[${value
+      .map((v, i) =>
+        _serialize.unknown(
+          v,
+          referencePaths,
+          _extendReferencePath(location, `${i}`)
+        )
+      )
+      .filter((s) => s !== undefined)
+      .join()}]`;
+  },
+  unknown(
+    value: unknown,
+    referencePaths: Map<ReferenceType, string>,
+    location?: string
+  ): string | undefined {
+    const type = typeof value;
+
+    if (value === null) {
+      return _tokens.null;
+    }
+
+    if (value instanceof Date) {
+      return _serialize.date(value, location);
+    }
+
+    const serializer = _serialize[type] as (
+      value: unknown,
+      referencePaths: Map<ReferenceType, string>,
+      location?: string
+    ) => string | undefined;
+
+    return serializer(value, referencePaths, location);
+  }
+});
+
+function _buildReferncePaths(value: unknown) {
+  const referencePaths = new Map<ReferenceType, string>();
+
+  if (!_isReferenceType(value)) {
+    return referencePaths;
+  }
+
+  const stack: { key: string; value: ReferenceType }[] = [
+    {
+      key: _rootReferencePath,
+      value: value as ReferenceType
+    }
+  ];
+
+  while (stack.length) {
+    const keyValuePair = stack.pop()!;
+
+    const referencePath = referencePaths.get(keyValuePair.value);
+
+    if (referencePath) {
+      continue;
+    }
+
+    referencePaths.set(keyValuePair.value, keyValuePair.key);
+
+    if (Array.isArray(keyValuePair.value)) {
+      keyValuePair.value.forEach((arrayValue, i) => {
+        if (_isReferenceType(arrayValue)) {
+          stack.push({
+            key: _extendReferencePath(keyValuePair.key, `${i}`),
+            value: arrayValue
+          });
+        }
+      });
+    } else {
+      Object.keys(keyValuePair.value).forEach((objectKey) => {
+        const objectValue = (keyValuePair.value as Record<string, unknown>)[
+          objectKey
+        ];
+
+        if (_isReferenceType(objectValue)) {
+          stack.push({
+            key: _extendReferencePath(keyValuePair.key, objectKey),
+            value: objectValue as ReferenceType
+          });
+        }
+      });
+    }
+  }
+
+  return referencePaths;
+}
 
 const _deserializers = Object.freeze({
   number(
@@ -95,11 +276,15 @@ const _deserializers = Object.freeze({
       characterLocation: Readonly<ICharacterLocation>
     ): IBigIntTypeValue {
       try {
-        const bigint = BigInt(value);
+        const bigIntString = value
+          .replace(_tokens.delimiters.bigInt, '')
+          .replace(_tokens.delimiters.bigInt, '');
+
+        const bigInt = BigInt(bigIntString);
 
         return {
           valueType: ValueType.bigint,
-          value: bigint
+          value: bigInt
         };
       } catch {
         // TODO not a big int
@@ -115,7 +300,13 @@ const _deserializers = Object.freeze({
       value: string,
       characterLocation: Readonly<ICharacterLocation>
     ): IDateTypeValue {
-      const date = new Date(value as string);
+      const dateString = JSON.parse(
+        value
+          .replace(_tokens.delimiters.date, '')
+          .replace(_tokens.delimiters.date, '')
+      );
+
+      const date = new Date(dateString);
 
       if (isNaN(date.getTime())) {
         // TODO invalid date
@@ -132,64 +323,58 @@ const _deserializers = Object.freeze({
         value: date
       };
     },
-    [_tokens.delimiters.referencePath](
-      value: string,
-      characterLocation: Readonly<ICharacterLocation>,
-      rootReferenceTypeValue: ReferenceTypeValue | undefined
-    ): IReferencePathTypeValue {
-      if (!rootReferenceTypeValue) {
-        // TODO: This is impossible, it's malformed json
-        throw new AjsonError(
-          '',
-          AjsonMethod.deserialize,
-          AjsonErrorCode.malformed,
-          characterLocation
-        );
-      }
-
-      const referencePath = value
-        .split(_tokens.delimiters.referencePath)
-        .filter((p) => p);
-
-      if (!referencePath) {
-        return {
-          valueType: ValueType.referencePath,
-          value: rootReferenceTypeValue
-        };
-      }
-
-      let referenceTypeValue = rootReferenceTypeValue;
-
-      while (referencePath.length) {
-        const key = referencePath.pop()!;
-
-        referenceTypeValue = referenceTypeValue.value[
-          key as keyof typeof referenceTypeValue.value
-        ] as ReferenceTypeValue;
-
-        if (referenceTypeValue === undefined) {
-          // TODO undefined reference
-          throw new AjsonError(
-            '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.bug,
-            characterLocation
-          );
-        }
-      }
-
-      return {
-        valueType: ValueType.referencePath,
-        value: referenceTypeValue
-      };
-    },
     [_tokens.delimiters.string](value: string): IStringTypeValue {
       return {
         valueType: ValueType.string,
-        value
+        value: JSON.parse(value)
       };
     }
   }),
+  [_tokens.separators.referencePath](
+    values: string[],
+    rootReferenceTypeValue: ReferenceTypeValue | undefined,
+    characterLocation: Readonly<ICharacterLocation>
+  ): IReferencePathTypeValue {
+    if (!rootReferenceTypeValue) {
+      // TODO: This is impossible, it's malformed json
+      throw new AjsonError(
+        '',
+        AjsonMethod.deserialize,
+        AjsonErrorCode.malformed,
+        characterLocation
+      );
+    }
+
+    const referencePath = values
+      .filter((v) => v)
+      .map((v) => JSON.parse(v) as string)
+      .reverse();
+
+    let referenceTypeValue = rootReferenceTypeValue;
+
+    while (referencePath.length) {
+      const key = referencePath.pop()!;
+
+      referenceTypeValue = referenceTypeValue.value[
+        key as keyof typeof referenceTypeValue.value
+      ] as ReferenceTypeValue;
+
+      if (referenceTypeValue === undefined) {
+        // TODO undefined reference
+        throw new AjsonError(
+          '',
+          AjsonMethod.deserialize,
+          AjsonErrorCode.bug,
+          characterLocation
+        );
+      }
+    }
+
+    return {
+      valueType: ValueType.referencePath,
+      value: referenceTypeValue
+    };
+  },
   keyword: Object.freeze({
     [_tokens.null](): INullTypeValue {
       return {
@@ -235,175 +420,6 @@ const _deserializers = Object.freeze({
     }
   })
 });
-
-function _isReferenceType(value: unknown) {
-  return value && (Array.isArray(value) || typeof value === 'object');
-}
-
-const _serialize = Object.freeze({
-  bigint: (value: bigint) =>
-    `${_tokens.delimiters.bigInt}${value}${_tokens.delimiters.bigInt}`,
-  string: (value: string) => JSON.stringify(value),
-  number: (value: number) => `${value}`,
-  symbol: () => undefined,
-  function: () => undefined,
-  undefined: () => _tokens.undefined,
-  boolean: (value: boolean) => `${value}`,
-  date(value: Date, location?: string) {
-    const time = value.getTime();
-
-    if (isNaN(time)) {
-      const errorPath = location ? ` at location: ${location}` : '';
-
-      throw new AjsonError(
-        `invalid date${errorPath}`,
-        AjsonMethod.serialize,
-        AjsonErrorCode.invalidDate
-      );
-    }
-
-    return `${_tokens.delimiters.date}${JSON.stringify(value)
-      .replace(_tokens.delimiters.string, '')
-      .replace(_tokens.delimiters.string, '')}`;
-  },
-  object(
-    value: ReferenceType,
-    referencePaths: Map<ReferenceType, string>,
-    location?: string
-  ) {
-    const referencePath = referencePaths.get(value as ReferenceType);
-
-    if (Array.isArray(value)) {
-      return (
-        referencePath ??
-        _serialize.arrayExtension(
-          value,
-          referencePaths,
-          location ?? _tokens.delimiters.referencePath
-        )
-      );
-    } else {
-      return (
-        referencePath ??
-        _serialize.objectExtension(
-          value as Record<string, unknown>,
-          referencePaths,
-          location ?? _tokens.delimiters.referencePath
-        )
-      );
-    }
-  },
-  objectExtension(
-    value: Record<string, unknown>,
-    referencePaths: Map<ReferenceType, string>,
-    location: string
-  ) {
-    return `{${Object.keys(value)
-      .map((key) => ({
-        key,
-        value: _serialize.unknown(
-          value[key],
-          referencePaths,
-          `${location}${key}${_tokens.delimiters.referencePath}`
-        )
-      }))
-      .filter((p) => p.value !== undefined)
-      .map((p) => `${_serialize.string(p.key)}:${p.value}`)
-      .join()}}`;
-  },
-  arrayExtension(
-    value: unknown[],
-    referencePaths: Map<ReferenceType, string>,
-    location: string
-  ) {
-    return `[${value
-      .map((v, i) =>
-        _serialize.unknown(
-          v,
-          referencePaths,
-          `${location}${i}${_tokens.delimiters.referencePath}`
-        )
-      )
-      .filter((s) => s !== undefined)
-      .join()}]`;
-  },
-  unknown(
-    value: unknown,
-    referencePaths: Map<ReferenceType, string>,
-    location?: string
-  ): string | undefined {
-    const type = typeof value;
-
-    if (value === null) {
-      return _tokens.null;
-    }
-
-    if (value instanceof Date) {
-      return _serialize.date(value, location);
-    }
-
-    const serializer = _serialize[type] as (
-      value: unknown,
-      referencePaths: Map<ReferenceType, string>,
-      location?: string
-    ) => string | undefined;
-
-    return serializer(value, referencePaths, location);
-  }
-});
-
-function _buildReferncePaths(value: unknown) {
-  const referencePaths = new Map<ReferenceType, string>();
-
-  if (!_isReferenceType(value)) {
-    return referencePaths;
-  }
-
-  const stack: { key: string; value: ReferenceType }[] = [
-    {
-      key: _tokens.delimiters.referencePath,
-      value: value as ReferenceType
-    }
-  ];
-
-  while (stack.length) {
-    const keyValuePair = stack.pop()!;
-
-    const referencePath = referencePaths.get(keyValuePair.value);
-
-    if (referencePath) {
-      continue;
-    }
-
-    referencePaths.set(keyValuePair.value, keyValuePair.key);
-
-    if (Array.isArray(keyValuePair.value)) {
-      keyValuePair.value.forEach((arrayValue, i) => {
-        if (_isReferenceType(arrayValue)) {
-          stack.push({
-            key: `${keyValuePair.key}${i}${_tokens.delimiters.referencePath}`,
-            value: arrayValue
-          });
-        }
-      });
-    } else {
-      Object.keys(keyValuePair.value).forEach((objectKey) => {
-        const objectValue = (keyValuePair.value as Record<string, unknown>)[
-          objectKey
-        ];
-
-        if (_isReferenceType(objectValue)) {
-          stack.push({
-            key: `${keyValuePair.key}${objectKey}${_tokens.delimiters.referencePath}`,
-            value: objectValue as ReferenceType
-          });
-        }
-      });
-    }
-  }
-
-  return referencePaths;
-}
 
 function _lexFiniteNumber(
   text: string,
@@ -563,12 +579,78 @@ function _lexKeywordTypeValue(text: string, index: number) {
   }
 }
 
+function _lexReferencePathTypeValue(
+  text: string,
+  index: number,
+  rootReferenceTypeValue: ReferenceTypeValue | undefined,
+  characterLocation: Readonly<ICharacterLocation>
+) {
+  let value = '';
+  const values: string[] = [];
+
+  for (let i = index; i < text.length; ++i) {
+    const character = text[i];
+
+    if (character === _tokens.separators.referencePath) {
+      if (value) {
+        if (value[value.length - 1] !== _tokens.delimiters.string) {
+          // TODO invalid referencePath
+          throw new AjsonError(
+            '',
+            AjsonMethod.deserialize,
+            AjsonErrorCode.malformed,
+            characterLocation
+          );
+        }
+
+        values.push(value);
+      }
+
+      value = '';
+      continue;
+    }
+
+    if (value === '' && character !== _tokens.delimiters.string) {
+      break;
+    }
+
+    value += character;
+  }
+
+  const lastCharacterIndex =
+    `${_tokens.separators.referencePath}${values.join(
+      _tokens.separators.referencePath
+    )}${_tokens.separators.referencePath}`.length -
+    1 +
+    index;
+
+  if (value) {
+    // TODO invalid referencePath
+    throw new AjsonError(
+      '',
+      AjsonMethod.deserialize,
+      AjsonErrorCode.malformed,
+      characterLocation
+    );
+  }
+
+  const typeValue = _deserializers[_tokens.separators.referencePath](
+    values,
+    rootReferenceTypeValue,
+    characterLocation
+  );
+
+  return {
+    typeValue,
+    lastCharacterIndex
+  };
+}
+
 function _lexDelimitedTypeValue(
   text: string,
   index: number,
   delimiter: string,
-  characterLocation: Readonly<ICharacterLocation>,
-  rootReferenceTypeValue: ReferenceTypeValue | undefined
+  characterLocation: Readonly<ICharacterLocation>
 ) {
   const deserializer =
     _deserializers.delimited[
@@ -600,11 +682,7 @@ function _lexDelimitedTypeValue(
     );
   }
 
-  const typeValue = deserializer(
-    value,
-    characterLocation,
-    rootReferenceTypeValue
-  );
+  const typeValue = deserializer(value, characterLocation);
 
   return {
     typeValue,
@@ -753,6 +831,38 @@ function _lex(text: string): TypeValue {
 
         continue;
       }
+      case _tokens.separators.referencePath: {
+        const characterLocation = Object.freeze<ICharacterLocation>({
+          tab,
+          line,
+          space
+        });
+
+        const { typeValue, lastCharacterIndex } = _lexReferencePathTypeValue(
+          text,
+          index,
+          rootReferenceTypeValue,
+          characterLocation
+        );
+
+        const result = _appendPrimitiveTypeValue(
+          text,
+          referenceTypeValue,
+          typeValue,
+          lastCharacterIndex,
+          characterLocation
+        );
+
+        if (typeof result === 'number') {
+          index = result;
+          continue;
+        } else if (typeof result === 'object') {
+          return result;
+        } else {
+          ++index;
+          continue;
+        }
+      }
       case _tokens.array.close:
       case _tokens.object.close: {
         ++index;
@@ -773,8 +883,7 @@ function _lex(text: string): TypeValue {
       }
       case _tokens.delimiters.date:
       case _tokens.delimiters.bigInt:
-      case _tokens.delimiters.string:
-      case _tokens.delimiters.referencePath: {
+      case _tokens.delimiters.string: {
         const characterLocation = Object.freeze<ICharacterLocation>({
           tab,
           line,
@@ -785,8 +894,7 @@ function _lex(text: string): TypeValue {
           text,
           index,
           character,
-          characterLocation,
-          rootReferenceTypeValue
+          characterLocation
         );
 
         const result = _appendPrimitiveTypeValue(

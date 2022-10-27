@@ -20,7 +20,7 @@ export class UserController implements IUserController {
 
   @authenticate()
   @route(HttpVerb.get, '/:id')
-  public async selectSingle(@routeParameter('id') id: string) {
+  public async selectSingle(@routeParameter() id: string) {
     try {
       const user = await this.#userService.selectSingle(id);
 

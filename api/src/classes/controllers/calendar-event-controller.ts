@@ -17,7 +17,7 @@ export class CalendarEventController implements ICalendarEventController {
 
   @authenticate()
   @route(HttpVerb.get, '/:id')
-  public async selectSingle(@routeParameter('id') id: string) {
+  public async selectSingle(@routeParameter() id: string) {
     try {
       const calendarEvent = await this.#calendarEventService.selectSingle(id);
 

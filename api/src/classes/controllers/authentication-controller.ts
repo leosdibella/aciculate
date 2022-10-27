@@ -1,5 +1,10 @@
 import { dependencyInjectionTokens } from '@data';
-import { controller, requestBody } from '@decorators';
+import {
+  authenticate,
+  controller,
+  requestBody,
+  routeParameter
+} from '@decorators';
 import { ControllerName } from '@enums';
 import {
   IAuthenticationController,
@@ -8,8 +13,10 @@ import {
   IUserContext
 } from '@interfaces';
 import { inject } from '@shared/decorators';
+import { Role } from '@shared/enums';
 import { IAuthenticationRequest } from '@shared/interfaces';
-import { badRequest, ok } from '@utilities';
+import { sanitizeDate } from '@shared/utilities';
+import { badRequest, ok, unauthorized } from '@utilities';
 
 @controller(ControllerName.authenticationController)
 export class AuthenticationController implements IAuthenticationController {
@@ -23,6 +30,73 @@ export class AuthenticationController implements IAuthenticationController {
       );
 
       return ok(response);
+    } catch (e: unknown) {
+      // TODO
+      throw badRequest();
+    }
+  }
+
+  @authenticate([Role.superAdmin])
+  async revokeSystemTokens(
+    @routeParameter(undefined, sanitizeDate) reallowOn?: Date
+  ) {
+    if (!reallowOn) {
+      // TODO
+      throw badRequest();
+    }
+
+    try {
+      await this.#authenticationService.revokeSystemTokens(reallowOn);
+
+      return ok();
+    } catch (e: unknown) {
+      // TODO
+      throw badRequest();
+    }
+  }
+
+  @authenticate([Role.admin])
+  async revokeOrganizationTokens(
+    @routeParameter() organizationId: string,
+    @routeParameter(undefined, sanitizeDate) reallowOn?: Date
+  ) {
+    if (organizationId !== this.userContext?.organizationId) {
+      // TODO
+      throw unauthorized();
+    }
+
+    if (!reallowOn) {
+      // TODO
+      throw badRequest();
+    }
+
+    try {
+      await this.#authenticationService.revokeOrganizationTokens(
+        organizationId,
+        reallowOn
+      );
+
+      return ok();
+    } catch (e: unknown) {
+      // TODO
+      throw badRequest();
+    }
+  }
+
+  @authenticate()
+  async revokeUserTokens(
+    @routeParameter() userId: string,
+    @routeParameter(undefined, sanitizeDate) reallowOn?: Date
+  ) {
+    if (!reallowOn) {
+      // TODO
+      throw badRequest();
+    }
+
+    try {
+      await this.#authenticationService.revokeUserTokens(userId, reallowOn);
+
+      return ok();
     } catch (e: unknown) {
       // TODO
       throw badRequest();

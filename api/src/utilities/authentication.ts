@@ -50,8 +50,9 @@ export async function decodeJwt(
               userId: payload.userId,
               roleId: payload.roleId,
               organizationId: payload.organizationId,
-              organizationSignature: payload.organizationSignature,
-              applicationSignature: payload.applicationSignature,
+              userSignature: new Date(payload.userSignature),
+              organizationSignature: new Date(payload.organizationSignature),
+              systemSignature: new Date(payload.systemSignature),
               organizationIds: payload.organizationIds
             });
           }

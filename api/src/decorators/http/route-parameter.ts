@@ -2,16 +2,16 @@ import { httpMetadataKeys } from '@data';
 import { IController, IRouteParameterMetadata } from '@interfaces';
 
 export function routeParameter<T extends IController>(
-  name: string,
+  name?: string,
   valueCoercer?: (value: string) => unknown
 ): ParameterDecorator {
   return function routeParameterDecorator(
     target: T,
-    propertyKey: Extract<keyof T, string>,
+    propertyKey: string,
     parameterIndex: number
   ) {
     const routeParametersDictionary: Partial<
-      Record<Extract<keyof T, string>, Readonly<IRouteParameterMetadata>[]>
+      Record<string, Readonly<IRouteParameterMetadata>[]>
     > = Reflect.getMetadata(httpMetadataKeys.routeParameter, target) || {};
 
     if (!Array.isArray(routeParametersDictionary[propertyKey])) {
@@ -21,7 +21,7 @@ export function routeParameter<T extends IController>(
     routeParametersDictionary[propertyKey]!.push(
       Object.freeze<IRouteParameterMetadata>({
         parameterIndex,
-        name,
+        name: name ?? propertyKey,
         valueCoercer
       })
     );

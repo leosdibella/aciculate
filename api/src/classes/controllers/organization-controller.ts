@@ -17,7 +17,7 @@ export class OrganizationController implements IOrganizationController {
 
   @authenticate()
   @route(HttpVerb.get, '/:id')
-  public async selectSingle(@routeParameter('id') id: string) {
+  public async selectSingle(@routeParameter() id: string) {
     try {
       const organization = await this.#organizationService.selectSingle(id);
 

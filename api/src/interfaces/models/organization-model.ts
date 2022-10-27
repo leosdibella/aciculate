@@ -6,4 +6,5 @@ export interface IOrganizationModel extends IBaseModel {
   readonly data: Readonly<Record<string, unknown>> | null;
   readonly description: string | null;
   readonly users: Readonly<Readonly<IUserModel>[]>;
+  readonly signature: Date;
 }

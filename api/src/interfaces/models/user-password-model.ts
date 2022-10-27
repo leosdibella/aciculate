@@ -5,6 +5,5 @@ export interface IUserPasswordModel extends IBaseModel {
   readonly salt: string;
   readonly hash: string;
   readonly lastLoginDate: Date;
-  readonly signature: string;
   readonly tokenSecret: string;
 }

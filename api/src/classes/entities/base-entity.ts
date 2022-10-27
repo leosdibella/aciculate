@@ -1,6 +1,5 @@
 import { FieldType, EntityName } from '@enums';
 import { IBaseModel, IForeignKey } from '@interfaces';
-import { sanitizeDate } from '@shared/utilities';
 import { IApiError } from '@shared/interfaces';
 import { Field, EntitySchema, ModelEntityName } from '@types';
 import { ApiError } from '@shared/classes';
@@ -283,8 +282,8 @@ export abstract class BaseEntity<T extends IBaseModel> {
   public constructor(model: Partial<IBaseModel>) {
     this.id = model.id;
     this.deleted = model.deleted;
-    this.#createdDate = sanitizeDate(model.createdDate);
-    this.#updatedDate = sanitizeDate(model.updatedDate);
+    this.#createdDate = model.createdDate;
+    this.#updatedDate = model.updatedDate;
     this.createdBy = model.createdBy;
     this.updatedBy = model.updatedBy;
   }

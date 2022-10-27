@@ -3,7 +3,6 @@ import { ISeedData, ISystemModel } from '@interfaces';
 import { BaseEntity } from './base-entity';
 import { EntityName, FieldType } from '@enums';
 import { entity, field } from '@decorators/database';
-import { randomUUID } from 'crypto';
 
 @entity(EntityName.system)
 export class SystemEntity
@@ -12,17 +11,16 @@ export class SystemEntity
 {
   public static seed(): ISeedData<ISystemModel> {
     return {
-      values: [{ signature: randomUUID() }],
+      values: [{ signature: new Date() }],
       conditions: ['deleted'],
       storeValues: true
     };
   }
 
   @field({
-    type: FieldType.uuid,
-    defaultValue: 'uuid_generate_v4()'
+    type: FieldType.timestamptz
   })
-  public readonly signature?: string;
+  public readonly signature?: Date;
 
   public constructor(model: Partial<ISystemModel>) {
     super(model);

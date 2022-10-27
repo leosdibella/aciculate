@@ -37,15 +37,9 @@ export class UserPasswordEntity
   public readonly lastLoginDate?: Date;
 
   @field({
-    type: FieldType.uuid,
-    defaultValue: 'uuid_generate_v4()'
-  })
-  public readonly signature?: string;
-
-  @field({
     type: FieldType.uuid
   })
-  public readonly 
+  public readonly tokenSecret?: string;
 
   public constructor(model: Partial<IUserPasswordModel>) {
     super(model);
@@ -54,6 +48,6 @@ export class UserPasswordEntity
     this.hash = model.hash;
     this.salt = model.salt;
     this.lastLoginDate = model.lastLoginDate;
-    this.signature = model.signature;
+    this.tokenSecret = model.tokenSecret;
   }
 }

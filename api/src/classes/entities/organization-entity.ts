@@ -42,10 +42,9 @@ export class OrganizationEntity
   public readonly description?: string | null;
 
   @field({
-    type: FieldType.uuid,
-    defaultValue: 'uuid_generate_v4()'
+    type: FieldType.timestamptz
   })
-  public readonly signature?: string;
+  public readonly signature?: Date;
 
   public readonly users: Readonly<Readonly<IUserModel>[]>;
 
@@ -54,6 +53,7 @@ export class OrganizationEntity
 
     this.title = model.title;
     this.description = model.description;
+    this.signature = model.signature;
     this.users = model.users ?? [];
     this.data = model.data;
   }

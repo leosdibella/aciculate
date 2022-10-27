@@ -13,5 +13,6 @@ export enum ApiErrorCode {
   circularDependency = 'circularDependency',
   nonConstructor = 'nonConstructor',
   nonFunction = 'nonFunction',
-  nonOptionalDependency = 'nonOptionalDependency'
+  nonOptionalDependency = 'nonOptionalDependency',
+  invalidUsernamePasswordCombination = 'invalidUsernamePasswordCombination'
 }

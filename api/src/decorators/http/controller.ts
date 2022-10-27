@@ -43,7 +43,62 @@ async function _authenticate<T extends IController>(
         }
       ])
     };
-  } else if (roles.length) {
+  }
+
+  const invalidTokenResponse: IHttpResponse = {
+    httpStatusCode: HttpStatusCode.forbidden,
+    response: new ApiError([
+      {
+        errorCode: ApiErrorCode.invalidToken,
+        message: 'Invalid authentication token'
+      }
+    ])
+  };
+
+  // Verify that the token has not been revoked
+  try {
+    const systemModel = (
+      await databaseContext.selectMany({
+        entityName: EntityName.system,
+        take: 1
+      })
+    ).results[0];
+
+    if (
+      systemModel?.signature.getTime() !==
+      controllerInstance.userContext.systemSignature.getTime()
+    ) {
+      return invalidTokenResponse;
+    }
+
+    const organizationModel = await databaseContext.selectSingle(
+      EntityName.organization,
+      controllerInstance.userContext.organizationId
+    );
+
+    if (
+      organizationModel.signature.getTime() !==
+      controllerInstance.userContext.organizationSignature.getTime()
+    ) {
+      return invalidTokenResponse;
+    }
+
+    const userModel = await databaseContext.selectSingle(
+      EntityName.user,
+      controllerInstance.userContext.userId
+    );
+
+    if (
+      userModel.signature.getTime() !==
+      controllerInstance.userContext.userSignature.getTime()
+    ) {
+      return invalidTokenResponse;
+    }
+  } catch {
+    return invalidTokenResponse;
+  }
+
+  if (roles.length) {
     const role = (
       await databaseContext.selectMany({
         entityName: EntityName.role

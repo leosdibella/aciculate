@@ -64,6 +64,11 @@ export class UserEntity
   })
   public readonly defaulyOrganizationId?: string | null;
 
+  @field({
+    type: FieldType.timestamptz
+  })
+  public readonly signature?: Date;
+
   public readonly organizations: Readonly<Readonly<IOrganizationModel[]>>;
   public readonly calendars: Readonly<Readonly<ICalendarModel>[]>;
 
@@ -75,6 +80,7 @@ export class UserEntity
     this.email = model.email;
     this.profileImage = model.profileImage;
     this.defaulyOrganizationId = model.defaulyOrganizationId;
+    this.signature = model.signature;
 
     this.organizations =
       model.organizations ?? Object.freeze<Readonly<IOrganizationModel>>([]);
