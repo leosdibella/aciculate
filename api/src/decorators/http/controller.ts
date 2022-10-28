@@ -11,7 +11,13 @@ import {
   IRouteParameterMetadata
 } from '@interfaces';
 import { ApiError } from '@shared/classes';
-import { ApiErrorCode, HttpStatusCode, HttpVerb, Role } from '@shared/enums';
+import {
+  ApiErrorCode,
+  CustomHeaderName,
+  HttpStatusCode,
+  HttpVerb,
+  Role
+} from '@shared/enums';
 import { registry, toCamelCase } from '@shared/utilities';
 import { Request, Response } from 'express';
 import { Constructor } from '@shared/types';
@@ -232,7 +238,9 @@ export function controller<T extends ControllerName>(controllerName: T) {
             const action = async (request: Request, response: Response) => {
               let userContext: IUserContext | undefined | null;
               const token = request.headers.authorization?.split(' ')[1];
-              const xTokenSecret = request.headers['X-Aciculate-Token-Secret'];
+
+              const xTokenSecret =
+                request.headers[CustomHeaderName.tokenSecret];
 
               const tokenSecret =
                 (Array.isArray(xTokenSecret)

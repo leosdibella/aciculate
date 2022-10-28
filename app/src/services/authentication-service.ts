@@ -1,5 +1,6 @@
 import { HttpError } from '@classes/http-error';
 import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
+import { LocalStorageKey } from '@enums/local-storage-key';
 import { IAuthenticationService, IHttpService } from '@interfaces';
 import { ApiError } from '@shared/classes';
 import { inject } from '@shared/decorators';
@@ -19,7 +20,12 @@ export class AuthenticationService implements IAuthenticationService {
         }
       });
 
-      return response;
+      localStorage.setItem(LocalStorageKey.authenticationToken, response.token);
+
+      localStorage.setItem(
+        LocalStorageKey.authenticationTokenSecret,
+        response.tokenSecret
+      );
     } catch (e: unknown) {
       if (e instanceof HttpError) {
         throw e.apiError;

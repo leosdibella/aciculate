@@ -1,4 +1,4 @@
-import { ReferenceTypeValue } from 'src/types';
+import { ReferenceTypeValue } from '../types';
 import { ValueType } from '../enums';
 
 export interface IReferencePathTypeValue {

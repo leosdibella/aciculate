@@ -35,7 +35,7 @@ export type DependencyInjectionTokenValue<
   : T extends ContextName.applicationContext
   ? Constructor<IApplicationContext>
   : T extends ContextName.userContext
-  ? IUserContext
+  ? Readonly<IUserContext>
   : T extends ContextName.databaseContext
   ? Constructor<IDatabaseContext>
   : T extends ContextName.httpContext
@@ -61,7 +61,7 @@ export type DependencyInjectionTokenValue<
   : T extends ControllerName.authenticationController
   ? Constructor<IAuthenticationController>
   : T extends ApplicationDependency.controllers
-  ? Constructor<IController>[]
+  ? Readonly<Constructor<IController>[]>
   : T extends DatabaseDependency.entities
   ? Entities
   : never;

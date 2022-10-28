@@ -7,12 +7,13 @@ import {
   IDateTypeValue,
   INullTypeValue,
   INumberTypeValue,
+  IReferenceLocation,
   IReferencePathTypeValue,
   IStringTypeValue,
   IUndefinedTypeValue
 } from '../interfaces';
 import { decimalBase } from './date-time';
-import { AjsonError } from 'src/classes/ajson-error';
+import { AjsonError } from '../classes/ajson-error';
 
 const _tokens = Object.freeze({
   null: `${null}`,
@@ -27,7 +28,7 @@ const _tokens = Object.freeze({
     decimal: '.',
     exponential: 'e',
     signs: Object.freeze(['-', '+']),
-    digits: Object.freeze([...Array(decimalBase)].map((i) => `${i}`)),
+    digits: Object.freeze([...Array(decimalBase)].map((_, i) => `${i}`)),
     keywords: Object.freeze([`${Infinity}`, `${-Infinity}`, `${NaN}`])
   }),
   object: Object.freeze({
@@ -50,6 +51,8 @@ const _tokens = Object.freeze({
     carriageReturn: '\r'
   })
 });
+
+const _whiteSpaceTokens: string[] = Object.values(_tokens.whitespace);
 
 const _keywordTokens = Object.freeze([
   _tokens.null,
@@ -107,18 +110,35 @@ const _serialize = Object.freeze({
       );
     }
 
-    return `${_tokens.delimiters.date}${JSON.stringify(value)}`;
+    return `${_tokens.delimiters.date}${JSON.stringify(value)}${
+      _tokens.delimiters.date
+    }`;
   },
   object(
     value: ReferenceType,
-    referencePaths: Map<ReferenceType, string>,
+    referencePaths: Map<ReferenceType, IReferenceLocation>,
     location?: string
   ) {
-    const referencePath = referencePaths.get(value as ReferenceType);
+    const referencePath = location
+      ? referencePaths.get(value as ReferenceType)
+      : undefined;
+
+    let referencePathLocation: string | undefined;
+
+    if (referencePath) {
+      if (referencePath.visited) {
+        referencePathLocation = referencePath.location;
+      } else {
+        referencePaths.set(value, {
+          location: referencePath.location,
+          visited: true
+        });
+      }
+    }
 
     if (Array.isArray(value)) {
       return (
-        referencePath ??
+        referencePathLocation ??
         _serialize.arrayExtension(
           value,
           referencePaths,
@@ -127,7 +147,7 @@ const _serialize = Object.freeze({
       );
     } else {
       return (
-        referencePath ??
+        referencePathLocation ??
         _serialize.objectExtension(
           value as Record<string, unknown>,
           referencePaths,
@@ -138,7 +158,7 @@ const _serialize = Object.freeze({
   },
   objectExtension(
     value: Record<string, unknown>,
-    referencePaths: Map<ReferenceType, string>,
+    referencePaths: Map<ReferenceType, IReferenceLocation>,
     location: string
   ) {
     return `{${Object.keys(value)
@@ -156,7 +176,7 @@ const _serialize = Object.freeze({
   },
   arrayExtension(
     value: unknown[],
-    referencePaths: Map<ReferenceType, string>,
+    referencePaths: Map<ReferenceType, IReferenceLocation>,
     location: string
   ) {
     return `[${value
@@ -172,7 +192,7 @@ const _serialize = Object.freeze({
   },
   unknown(
     value: unknown,
-    referencePaths: Map<ReferenceType, string>,
+    referencePaths: Map<ReferenceType, IReferenceLocation>,
     location?: string
   ): string | undefined {
     const type = typeof value;
@@ -187,7 +207,7 @@ const _serialize = Object.freeze({
 
     const serializer = _serialize[type] as (
       value: unknown,
-      referencePaths: Map<ReferenceType, string>,
+      referencePaths: Map<ReferenceType, IReferenceLocation>,
       location?: string
     ) => string | undefined;
 
@@ -196,7 +216,7 @@ const _serialize = Object.freeze({
 });
 
 function _buildReferncePaths(value: unknown) {
-  const referencePaths = new Map<ReferenceType, string>();
+  const referencePaths = new Map<ReferenceType, IReferenceLocation>();
 
   if (!_isReferenceType(value)) {
     return referencePaths;
@@ -218,10 +238,16 @@ function _buildReferncePaths(value: unknown) {
       continue;
     }
 
-    referencePaths.set(keyValuePair.value, keyValuePair.key);
+    referencePaths.set(keyValuePair.value, {
+      location: keyValuePair.key,
+      visited: false
+    });
 
+    // Note the keys need to be reveresed so they are plucked from the stack in alpha/numerical order
+    // this preserves order as they are ordered by first appearance, and traversed by first appearance
+    // when deserialized into actual references.
     if (Array.isArray(keyValuePair.value)) {
-      keyValuePair.value.forEach((arrayValue, i) => {
+      [...keyValuePair.value].reverse().forEach((arrayValue, i) => {
         if (_isReferenceType(arrayValue)) {
           stack.push({
             key: _extendReferencePath(keyValuePair.key, `${i}`),
@@ -230,18 +256,20 @@ function _buildReferncePaths(value: unknown) {
         }
       });
     } else {
-      Object.keys(keyValuePair.value).forEach((objectKey) => {
-        const objectValue = (keyValuePair.value as Record<string, unknown>)[
-          objectKey
-        ];
+      Object.keys(keyValuePair.value)
+        .reverse()
+        .forEach((objectKey) => {
+          const objectValue = (keyValuePair.value as Record<string, unknown>)[
+            objectKey
+          ];
 
-        if (_isReferenceType(objectValue)) {
-          stack.push({
-            key: _extendReferencePath(keyValuePair.key, objectKey),
-            value: objectValue as ReferenceType
-          });
-        }
-      });
+          if (_isReferenceType(objectValue)) {
+            stack.push({
+              key: _extendReferencePath(keyValuePair.key, objectKey),
+              value: objectValue as ReferenceType
+            });
+          }
+        });
     }
   }
 
@@ -300,11 +328,11 @@ const _deserializers = Object.freeze({
       value: string,
       characterLocation: Readonly<ICharacterLocation>
     ): IDateTypeValue {
-      const dateString = JSON.parse(
+      const dateString = _deserializers.delimited[_tokens.delimiters.string](
         value
           .replace(_tokens.delimiters.date, '')
           .replace(_tokens.delimiters.date, '')
-      );
+      ).value;
 
       const date = new Date(dateString);
 
@@ -333,6 +361,7 @@ const _deserializers = Object.freeze({
   [_tokens.separators.referencePath](
     values: string[],
     rootReferenceTypeValue: ReferenceTypeValue | undefined,
+    currentReferenceTypeValue: ReferenceTypeValue | undefined,
     characterLocation: Readonly<ICharacterLocation>
   ): IReferencePathTypeValue {
     if (!rootReferenceTypeValue) {
@@ -347,19 +376,35 @@ const _deserializers = Object.freeze({
 
     const referencePath = values
       .filter((v) => v)
-      .map((v) => JSON.parse(v) as string)
-      .reverse();
+      .map((v) => _deserializers.delimited[_tokens.delimiters.string](v).value);
+
+    const rootReferencePath = [...referencePath].reverse();
 
     let referenceTypeValue = rootReferenceTypeValue;
+    let wasSet = true;
 
-    while (referencePath.length) {
-      const key = referencePath.pop()!;
+    while (rootReferencePath.length) {
+      const key = rootReferencePath.pop()!;
 
-      referenceTypeValue = referenceTypeValue.value[
-        key as keyof typeof referenceTypeValue.value
-      ] as ReferenceTypeValue;
+      if (referenceTypeValue.valueType === ValueType.array) {
+        referenceTypeValue = referenceTypeValue.value[
+          +key
+        ] as ReferenceTypeValue;
+      } else {
+        referenceTypeValue = referenceTypeValue.value?.find(
+          (v) => v.name === key
+        )?.value as ReferenceTypeValue;
+      }
 
+      // Might not be in the root chain yet
       if (referenceTypeValue === undefined) {
+        wasSet = false;
+        break;
+      }
+    }
+
+    if (!wasSet) {
+      if (!currentReferenceTypeValue) {
         // TODO undefined reference
         throw new AjsonError(
           '',
@@ -367,6 +412,52 @@ const _deserializers = Object.freeze({
           AjsonErrorCode.bug,
           characterLocation
         );
+      }
+
+      referenceTypeValue = currentReferenceTypeValue;
+
+      while (referencePath.length) {
+        const key = referencePath.pop()!;
+
+        if (referenceTypeValue.parent?.valueType === ValueType.array) {
+          referenceTypeValue = referenceTypeValue.parent.value[
+            +key
+          ] as ReferenceTypeValue;
+        } else if (referenceTypeValue.parent?.valueType === ValueType.object) {
+          const nextReferenceTypeValue = referenceTypeValue.parent.value.find(
+            (v) => v.name === key
+          );
+
+          if (
+            nextReferenceTypeValue?.value &&
+            (nextReferenceTypeValue.value.valueType === ValueType.array ||
+              nextReferenceTypeValue.value.valueType === ValueType.object)
+          ) {
+            referenceTypeValue =
+              nextReferenceTypeValue.value as ReferenceTypeValue;
+          } else {
+            referenceTypeValue = currentReferenceTypeValue;
+            break;
+          }
+        } else {
+          // TODO undefined reference
+          throw new AjsonError(
+            '',
+            AjsonMethod.deserialize,
+            AjsonErrorCode.bug,
+            characterLocation
+          );
+        }
+
+        if (referenceTypeValue === undefined) {
+          // TODO undefined reference
+          throw new AjsonError(
+            '',
+            AjsonMethod.deserialize,
+            AjsonErrorCode.bug,
+            characterLocation
+          );
+        }
       }
     }
 
@@ -446,7 +537,7 @@ function _lexFiniteNumber(
   }
 
   const typeValue = _deserializers.number(value, characterLocation);
-  const lastCharacterIndex = value.length - 1 + value.length;
+  const lastCharacterIndex = value.length + index;
 
   return {
     typeValue,
@@ -483,9 +574,9 @@ function _appendPrimitiveTypeValue(
   if (referenceTypeValue) {
     _appendTypeValue(referenceTypeValue, typeValue);
 
-    return lastCharacterIndex + 1;
+    return lastCharacterIndex;
   } else {
-    const remainingText = text.slice(lastCharacterIndex + 1).trim();
+    const remainingText = text.slice(lastCharacterIndex).trim();
 
     if (remainingText) {
       // TODO malformed json
@@ -562,7 +653,7 @@ function _lexKeywordTypeValue(text: string, index: number) {
   }
 
   const deserializer = _deserializers.keyword[value];
-  const lastCharacterIndex = value.length - 1 + index;
+  const lastCharacterIndex = value.length + index;
 
   if (deserializer) {
     const typeValue = deserializer();
@@ -583,6 +674,7 @@ function _lexReferencePathTypeValue(
   text: string,
   index: number,
   rootReferenceTypeValue: ReferenceTypeValue | undefined,
+  currentReferenceTypeValue: ReferenceTypeValue | undefined,
   characterLocation: Readonly<ICharacterLocation>
 ) {
   let value = '';
@@ -620,9 +712,7 @@ function _lexReferencePathTypeValue(
   const lastCharacterIndex =
     `${_tokens.separators.referencePath}${values.join(
       _tokens.separators.referencePath
-    )}${_tokens.separators.referencePath}`.length -
-    1 +
-    index;
+    )}${_tokens.separators.referencePath}`.length + index;
 
   if (value) {
     // TODO invalid referencePath
@@ -637,6 +727,7 @@ function _lexReferencePathTypeValue(
   const typeValue = _deserializers[_tokens.separators.referencePath](
     values,
     rootReferenceTypeValue,
+    currentReferenceTypeValue,
     characterLocation
   );
 
@@ -664,13 +755,13 @@ function _lexDelimitedTypeValue(
 
     value += character;
 
-    if (character === delimiter) {
+    if (character === delimiter && i > index) {
       break;
     }
   }
 
-  const lastCharacterIndex = value.length - 1 + index;
-  const lastCharacter = text[lastCharacterIndex];
+  const lastCharacterIndex = value.length + index;
+  const lastCharacter = text[lastCharacterIndex - 1];
 
   if (lastCharacter !== delimiter) {
     // TODO not a valid delimited value
@@ -730,6 +821,7 @@ function _lex(text: string): TypeValue {
         ++index;
         continue;
       }
+      case _tokens.separators.name:
       case _tokens.separators.value: {
         ++index;
         continue;
@@ -766,14 +858,32 @@ function _lex(text: string): TypeValue {
         });
 
         let name = '';
+        let quotePosition: -1 | 0 | 1 = -1;
+        let charactersExamined = 1;
 
-        for (let i = index; i < text.length; ++i) {
+        for (let i = index + 1; i < text.length; ++i) {
           const objectCharacter = text[i];
+
+          if (_whiteSpaceTokens.indexOf(objectCharacter) > -1) {
+            if (quotePosition === -1 || quotePosition === 1) {
+              ++charactersExamined;
+              continue;
+            }
+          }
+
+          if (objectCharacter === _tokens.delimiters.string) {
+            if (quotePosition === -1) {
+              quotePosition = 0;
+            } else if (quotePosition === 0) {
+              quotePosition = 1;
+            }
+          }
 
           if (
             objectCharacter !== _tokens.separators.name &&
             objectCharacter !== _tokens.object.close
           ) {
+            ++charactersExamined;
             name += objectCharacter;
             continue;
           }
@@ -781,7 +891,8 @@ function _lex(text: string): TypeValue {
           break;
         }
 
-        const lastCharacterIndex = name.length - 1 + index;
+        // the +1 is for the ":" value
+        const lastCharacterIndex = index + charactersExamined + 1;
         const lastCharacter = text[lastCharacterIndex];
 
         if (
@@ -823,11 +934,12 @@ function _lex(text: string): TypeValue {
         }
 
         referenceTypeValue.value.push({
-          name
+          name: _deserializers.delimited[_tokens.delimiters.string](name).value
         });
 
         index =
-          lastCharacterIndex + (lastCharacter === _tokens.object.close ? 0 : 1);
+          lastCharacterIndex +
+          (text[lastCharacterIndex - 1] === _tokens.object.close ? -1 : 0);
 
         continue;
       }
@@ -842,6 +954,7 @@ function _lex(text: string): TypeValue {
           text,
           index,
           rootReferenceTypeValue,
+          referenceTypeValue,
           characterLocation
         );
 
@@ -881,40 +994,6 @@ function _lex(text: string): TypeValue {
 
         return nextReferenceTypeValue!;
       }
-      case _tokens.delimiters.date:
-      case _tokens.delimiters.bigInt:
-      case _tokens.delimiters.string: {
-        const characterLocation = Object.freeze<ICharacterLocation>({
-          tab,
-          line,
-          space
-        });
-
-        const { lastCharacterIndex, typeValue } = _lexDelimitedTypeValue(
-          text,
-          index,
-          character,
-          characterLocation
-        );
-
-        const result = _appendPrimitiveTypeValue(
-          text,
-          referenceTypeValue,
-          typeValue,
-          lastCharacterIndex,
-          characterLocation
-        );
-
-        if (typeof result === 'number') {
-          index = result;
-          continue;
-        } else if (typeof result === 'object') {
-          return result;
-        } else {
-          ++index;
-          continue;
-        }
-      }
       default: {
         const characterLocation = Object.freeze<ICharacterLocation>({
           tab,
@@ -939,28 +1018,77 @@ function _lex(text: string): TypeValue {
           return keywordResult;
         }
 
-        const lexedFiniteNumber = _lexFiniteNumber(
-          text,
-          index,
-          characterLocation
-        );
+        switch (character) {
+          case _tokens.delimiters.date:
+          case _tokens.delimiters.bigInt:
+          case _tokens.delimiters.string: {
+            const { lastCharacterIndex, typeValue } = _lexDelimitedTypeValue(
+              text,
+              index,
+              character,
+              characterLocation
+            );
 
-        const numberResult = _appendPrimitiveTypeValue(
-          text,
-          referenceTypeValue,
-          lexedFiniteNumber.typeValue,
-          lexedFiniteNumber.lastCharacterIndex,
-          characterLocation
-        );
+            if (
+              referenceTypeValue?.valueType === ValueType.object &&
+              typeValue.valueType === ValueType.string
+            ) {
+              const lastValue =
+                referenceTypeValue.value[referenceTypeValue.value.length - 1];
 
-        if (typeof numberResult === 'number') {
-          index = numberResult;
-          continue;
-        } else if (typeof numberResult === 'object') {
-          return numberResult;
-        } else {
-          ++index;
-          continue;
+              if (lastValue.value) {
+                referenceTypeValue.value.push({
+                  name: typeValue.value
+                });
+
+                index = lastCharacterIndex;
+                continue;
+              }
+            }
+
+            const result = _appendPrimitiveTypeValue(
+              text,
+              referenceTypeValue,
+              typeValue,
+              lastCharacterIndex,
+              characterLocation
+            );
+
+            if (typeof result === 'number') {
+              index = result;
+              continue;
+            } else if (typeof result === 'object') {
+              return result;
+            } else {
+              ++index;
+              continue;
+            }
+          }
+          default: {
+            const lexedFiniteNumber = _lexFiniteNumber(
+              text,
+              index,
+              characterLocation
+            );
+
+            const numberResult = _appendPrimitiveTypeValue(
+              text,
+              referenceTypeValue,
+              lexedFiniteNumber.typeValue,
+              lexedFiniteNumber.lastCharacterIndex,
+              characterLocation
+            );
+
+            if (typeof numberResult === 'number') {
+              index = numberResult;
+              continue;
+            } else if (typeof numberResult === 'object') {
+              return numberResult;
+            } else {
+              ++index;
+              continue;
+            }
+          }
         }
       }
     }

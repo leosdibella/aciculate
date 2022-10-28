@@ -20,3 +20,5 @@ export * from './string-type-value';
 export * from './undefined-type-value';
 export * from './character-location';
 export * from './authentication';
+export * from './custom-element-arguments';
+export * from './reference-location';

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { exit } from 'process';
-import { IApplicationContext } from '@interfaces';
+import { IApplicationContext, IController } from '@interfaces';
 import {
   DatabaseContext,
   ApplicationContext,
@@ -42,6 +42,7 @@ import {
   DependencyInjectionTokenKey,
   DependencyInjectionTokenValue
 } from '@types';
+import { Constructor } from '@shared/types';
 
 const _dependencies = Object.freeze<
   Partial<{
@@ -103,16 +104,16 @@ const _dependencies = Object.freeze<
     isConstructor: true
   },
   [ApplicationDependency.controllers]: {
-    value: [
+    value: Object.freeze<Constructor<IController>[]>([
       UserController,
       CalendarController,
       OrganizationController,
       CalendarEventController,
       AuthenticationController
-    ]
+    ])
   },
   [DatabaseDependency.entities]: {
-    value: {
+    value: Object.freeze({
       [EntityName.user]: UserEntity,
       [EntityName.role]: RoleEntity,
       [EntityName.calendar]: CalendarEntity,
@@ -122,7 +123,7 @@ const _dependencies = Object.freeze<
       [EntityName.organizationCalendar]: OrganizationCalendarEntity,
       [EntityName.organizationUserRole]: OrganizationUserRoleEntity,
       [EntityName.system]: SystemEntity
-    }
+    })
   }
 });
 

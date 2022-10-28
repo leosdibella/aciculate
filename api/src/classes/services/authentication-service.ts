@@ -80,11 +80,7 @@ export class AuthenticationService implements IAuthenticationService {
 
     return {
       token,
-      tokenSecret: updatedUserPassword.tokenSecret,
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName
-      }
+      tokenSecret: updatedUserPassword.tokenSecret
     };
   }
 
