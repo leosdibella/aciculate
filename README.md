@@ -34,12 +34,12 @@ A lot. Most things are built from scratch, just for fun / challenge.
         - Built on top of Native Web Components
     8. UI Component Library
         - Themeable using CSS variables + public API
-    9. Custom JSON Serialize / Deserialize (lexer + parser) methods (AJSON = Aciculate JSON)
-        - Supports Dates more elegantly
-        - Supports circular references
+    9. Obelisk - A custom JSON Serializer / Deserialize
+        - Supports Native Date Objects
+        - Supports shallow references (including circular references)
         - Supports BigInt
         - Supports NaN
-        - Supports Infinity
+        - Supports Infinity / -Infinity
         - Supports undefined
     10. Generic JavaScript Utilities
         - Deep Copy

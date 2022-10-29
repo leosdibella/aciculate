@@ -1,22 +1,22 @@
-import { AjsonErrorCode, AjsonMethod } from '../enums';
+import { ObeliskErrorCode, ObeliskMethod } from '../enums';
 import { ICharacterLocation } from '../interfaces';
 
-export class AjsonError extends Error {
+export class ObeliskError extends Error {
   static #formatErrorMessage(
     message: string,
-    method: AjsonMethod,
-    errorCode: AjsonErrorCode,
+    method: ObeliskMethod,
+    errorCode: ObeliskErrorCode,
     characterLocation: ICharacterLocation
   ): string {
     const locationInformation =
-      method === AjsonMethod.deserialize
+      method === ObeliskMethod.deserialize
         ? ` - line number: ${characterLocation.line}, space count ${characterLocation.space}, tab count: ${characterLocation.tab}`
         : '';
 
-    return `AJSON ${method} error - ${message} - code: ${errorCode}${locationInformation}`;
+    return `Obelisk ${method} error - ${message} - code: ${errorCode}${locationInformation}`;
   }
 
-  readonly #errorCode: AjsonErrorCode;
+  readonly #errorCode: ObeliskErrorCode;
   readonly #characterLocation: ICharacterLocation;
 
   public get errorCode() {
@@ -29,8 +29,8 @@ export class AjsonError extends Error {
 
   public constructor(
     message: string,
-    method: AjsonMethod,
-    errorCode: AjsonErrorCode,
+    method: ObeliskMethod,
+    errorCode: ObeliskErrorCode,
     characterLocation = Object.freeze<ICharacterLocation>({
       tab: 0,
       line: 0,
@@ -38,7 +38,7 @@ export class AjsonError extends Error {
     })
   ) {
     super(
-      AjsonError.#formatErrorMessage(
+      ObeliskError.#formatErrorMessage(
         message,
         method,
         errorCode,

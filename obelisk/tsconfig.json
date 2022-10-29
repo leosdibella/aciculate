@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
+    "baseUrl": ".",
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "paths": {},
+    "target": "ES2019",
+    "typeRoots": ["node_modules/@types"],
+    "lib": ["ES2020"],
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "./node_modules",
+    "./tests"
+  ]
+}

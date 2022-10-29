@@ -1,4 +1,4 @@
-export enum AjsonMethod {
+export enum ObeliskMethod {
   serialize = 'serialize',
   deserialize = 'deserialize'
 }

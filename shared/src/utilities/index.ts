@@ -3,4 +3,3 @@ export * from './numerical';
 export * from './registry';
 export * from './string';
 export * from './validation';
-export * from './ajson';

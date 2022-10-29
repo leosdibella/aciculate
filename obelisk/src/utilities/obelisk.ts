@@ -4,7 +4,7 @@ import {
   ReferenceTypeValue,
   TypeValue
 } from '../types';
-import { AjsonErrorCode, AjsonMethod, ValueType } from '../enums';
+import { ObeliskErrorCode, ObeliskMethod, ValueType } from '../enums';
 import {
   IBigIntTypeValue,
   IBooleanTypeValue,
@@ -17,10 +17,10 @@ import {
   IStringTypeValue,
   IUndefinedTypeValue
 } from '../interfaces';
-import { decimalBase } from './date-time';
-import { AjsonError } from '../classes/ajson-error';
+import { ObeliskError } from '../classes';
 
-const _referencePathPiecesSymbol = Symbol('ajson_reference_path_pieces');
+const _referencePathPiecesSymbol = Symbol('obelisk_reference_path_pieces');
+const _decimalBase = 10;
 
 const _tokens = Object.freeze({
   null: `${null}`,
@@ -35,7 +35,7 @@ const _tokens = Object.freeze({
     decimal: '.',
     exponential: 'e',
     signs: Object.freeze(['-', '+']),
-    digits: Object.freeze([...Array(decimalBase)].map((_, i) => `${i}`)),
+    digits: Object.freeze([...Array(_decimalBase)].map((_, i) => `${i}`)),
     keywords: Object.freeze([`${Infinity}`, `${-Infinity}`, `${NaN}`])
   }),
   object: Object.freeze({
@@ -95,6 +95,14 @@ function _deserializeString(value: string): IStringTypeValue {
   };
 }
 
+function _serializeString(value: string) {
+  return JSON.stringify(value);
+}
+
+function _serializeDate(value: Date) {
+  return JSON.stringify(value);
+}
+
 function _getReferencePathPieceType(value: string) {
   const type =
     value[0] === _tokens.object.open
@@ -124,10 +132,10 @@ function _deserializeReferencePathPiece(
 
   if (type === undefined || type !== typeConfirmation) {
     // TODO: This is impossible, it's malformed json
-    throw new AjsonError(
+    throw new ObeliskError(
       '',
-      AjsonMethod.deserialize,
-      AjsonErrorCode.malformed,
+      ObeliskMethod.deserialize,
+      ObeliskErrorCode.malformed,
       characterLocation
     );
   }
@@ -143,10 +151,10 @@ function _deserializeReferencePathPiece(
 
     if (!Number.isInteger(value) || value < 0) {
       // TODO: This is impossible, it's malformed json
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed,
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed,
         characterLocation
       );
     }
@@ -182,10 +190,10 @@ function _lexReferencePathTypeValue(
           value[value.length - 2] !== _tokens.delimiters.string
         ) {
           // TODO invalid referencePath
-          throw new AjsonError(
+          throw new ObeliskError(
             '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.malformed,
+            ObeliskMethod.deserialize,
+            ObeliskErrorCode.malformed,
             characterLocation
           );
         }
@@ -216,10 +224,10 @@ function _lexReferencePathTypeValue(
 
   if (value) {
     // TODO invalid referencePath
-    throw new AjsonError(
+    throw new ObeliskError(
       '',
-      AjsonMethod.deserialize,
-      AjsonErrorCode.malformed,
+      ObeliskMethod.deserialize,
+      ObeliskErrorCode.malformed,
       characterLocation
     );
   }
@@ -247,20 +255,20 @@ function _extendReferencePath(
   const wrappers = _valueTypePathReferenceWrappers[valueType];
 
   if (referencePath === _rootReferencePath) {
-    return `${_tokens.separators.referencePath}${wrappers[0]}${JSON.stringify(
+    return `${_tokens.separators.referencePath}${wrappers[0]}${_serializeString(
       value
     )}${wrappers[1]}${_tokens.separators.referencePath}`;
   }
 
-  return `${referencePath}${wrappers[0]}${JSON.stringify(value)}${wrappers[1]}${
-    _tokens.separators.referencePath
-  }`;
+  return `${referencePath}${wrappers[0]}${_serializeString(value)}${
+    wrappers[1]
+  }${_tokens.separators.referencePath}`;
 }
 
 const _serialize = Object.freeze({
   bigint: (value: bigint) =>
     `${_tokens.delimiters.bigInt}${value}${_tokens.delimiters.bigInt}`,
-  string: (value: string) => JSON.stringify(value),
+  string: _serializeString,
   number: (value: number) => `${value}`,
   symbol: () => undefined,
   function: () => undefined,
@@ -272,14 +280,14 @@ const _serialize = Object.freeze({
     if (isNaN(time)) {
       const errorPath = location ? ` at location: ${location}` : '';
 
-      throw new AjsonError(
+      throw new ObeliskError(
         `invalid date${errorPath}`,
-        AjsonMethod.serialize,
-        AjsonErrorCode.invalidDate
+        ObeliskMethod.serialize,
+        ObeliskErrorCode.invalidDate
       );
     }
 
-    return `${_tokens.delimiters.date}${JSON.stringify(value)}${
+    return `${_tokens.delimiters.date}${_serializeDate(value)}${
       _tokens.delimiters.date
     }`;
   },
@@ -348,6 +356,10 @@ const _serialize = Object.freeze({
     referencePaths: Map<ReferenceType, IReferenceLocation>,
     location: string
   ) {
+    console.log(referencePaths);
+    console.log(location);
+    console.log(value);
+
     return `[${value
       .map((v, i) =>
         _serialize.unknown(
@@ -478,19 +490,19 @@ function _resolveReference(
       ] as ReferenceType;
     } else {
       // TODO invalid referencePath
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed
       );
     }
 
     if (!resolvedReference || typeof resolvedReference !== 'object') {
       // TODO invalid referencePath
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed
       );
     }
   }
@@ -521,19 +533,19 @@ function _replaceSymbolicReferences(
         ] as ReferenceType;
       } else {
         // TODO invalid referencePath
-        throw new AjsonError(
+        throw new ObeliskError(
           '',
-          AjsonMethod.deserialize,
-          AjsonErrorCode.malformed
+          ObeliskMethod.deserialize,
+          ObeliskErrorCode.malformed
         );
       }
 
       if (!reference || typeof reference !== 'object') {
         // TODO invalid referencePath
-        throw new AjsonError(
+        throw new ObeliskError(
           '',
-          AjsonMethod.deserialize,
-          AjsonErrorCode.malformed
+          ObeliskMethod.deserialize,
+          ObeliskErrorCode.malformed
         );
       }
     }
@@ -542,10 +554,10 @@ function _replaceSymbolicReferences(
 
     if (!_isValidReferencePoint) {
       // TODO invalid referencePath
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed
       );
     }
 
@@ -559,10 +571,10 @@ function _replaceSymbolicReferences(
         referencePathPieces
     ) {
       // TODO invalid referencePath
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed
       );
     }
 
@@ -623,7 +635,7 @@ function _resolveRefernecePaths(value: ReferenceType) {
               referencePathLocations[
                 _extendReferencePath(
                   keyValuePair.key,
-                  `${propertyName}`,
+                  propertyName,
                   ValueType.object
                 )
               ] = (property as Record<symbol, ReferencePathPiece[]>)[
@@ -656,10 +668,10 @@ const _deserializers = Object.freeze({
 
     if (isNaN(number)) {
       // TODO invalid number
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed,
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed,
         characterLocation
       );
     }
@@ -687,10 +699,10 @@ const _deserializers = Object.freeze({
         };
       } catch {
         // TODO not a big int
-        throw new AjsonError(
+        throw new ObeliskError(
           '',
-          AjsonMethod.deserialize,
-          AjsonErrorCode.malformed,
+          ObeliskMethod.deserialize,
+          ObeliskErrorCode.malformed,
           characterLocation
         );
       }
@@ -709,10 +721,10 @@ const _deserializers = Object.freeze({
 
       if (isNaN(date.getTime())) {
         // TODO invalid date
-        throw new AjsonError(
+        throw new ObeliskError(
           '',
-          AjsonMethod.deserialize,
-          AjsonErrorCode.malformed,
+          ObeliskMethod.deserialize,
+          ObeliskErrorCode.malformed,
           characterLocation
         );
       }
@@ -838,10 +850,10 @@ function _appendPrimitiveTypeValue(
 
     if (remainingText) {
       // TODO malformed json
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed,
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed,
         characterLocation
       );
     }
@@ -861,10 +873,10 @@ function _appendReferenceTypeValue(
 
   if (!referenceTypeValue) {
     // TODO invalid json
-    throw new AjsonError(
+    throw new ObeliskError(
       '',
-      AjsonMethod.deserialize,
-      AjsonErrorCode.malformed,
+      ObeliskMethod.deserialize,
+      ObeliskErrorCode.malformed,
       characterLocation
     );
   }
@@ -872,10 +884,10 @@ function _appendReferenceTypeValue(
   if (remainingText) {
     if (!referenceTypeValue.parent) {
       // TODO invalid json
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed,
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed,
         characterLocation
       );
     }
@@ -956,10 +968,10 @@ function _lexDelimitedTypeValue(
 
   if (lastCharacter !== delimiter) {
     // TODO not a valid delimited value
-    throw new AjsonError(
+    throw new ObeliskError(
       '',
-      AjsonMethod.deserialize,
-      AjsonErrorCode.malformed,
+      ObeliskMethod.deserialize,
+      ObeliskErrorCode.malformed,
       characterLocation
     );
   }
@@ -1082,10 +1094,10 @@ function _lex(text: string): TypeValue {
           lastCharacterIndex === text.length - 1
         ) {
           // TODO not valid JSON
-          throw new AjsonError(
+          throw new ObeliskError(
             '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.malformed,
+            ObeliskMethod.deserialize,
+            ObeliskErrorCode.malformed,
             characterLocation
           );
         }
@@ -1094,10 +1106,10 @@ function _lex(text: string): TypeValue {
 
         if (name.length < 2 && lastCharacter !== _tokens.object.close) {
           // TODO missing property name
-          throw new AjsonError(
+          throw new ObeliskError(
             '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.malformed,
+            ObeliskMethod.deserialize,
+            ObeliskErrorCode.malformed,
             characterLocation
           );
         }
@@ -1107,10 +1119,10 @@ function _lex(text: string): TypeValue {
           name[name.length - 1] !== _tokens.delimiters.string
         ) {
           // TODO not valid JSON missing quotes around property name
-          throw new AjsonError(
+          throw new ObeliskError(
             '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.malformed,
+            ObeliskMethod.deserialize,
+            ObeliskErrorCode.malformed,
             characterLocation
           );
         }
@@ -1308,10 +1320,10 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
 
         if (!memberValue) {
           // TODO never assigned value to property
-          throw new AjsonError(
+          throw new ObeliskError(
             '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.malformed
+            ObeliskMethod.deserialize,
+            ObeliskErrorCode.malformed
           );
         }
 
@@ -1325,16 +1337,16 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
     }
     default: {
       // TODO something went horribly wrong
-      throw new AjsonError(
+      throw new ObeliskError(
         '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed
+        ObeliskMethod.deserialize,
+        ObeliskErrorCode.malformed
       );
     }
   }
 }
 
-export const ajson = Object.freeze({
+export const obelisk = Object.freeze({
   serialize(value: unknown) {
     return _serialize.unknown(value, _buildReferncePaths(value));
   },
