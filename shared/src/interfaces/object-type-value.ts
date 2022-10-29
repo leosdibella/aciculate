@@ -6,5 +6,4 @@ export interface IObjectTypeValue {
   readonly valueType: ValueType.object;
   readonly value: IMemberType[];
   readonly parent?: ReferenceTypeValue;
-  resolvedValue?: Record<string, unknown>;
 }

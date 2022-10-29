@@ -1,4 +1,9 @@
-import { ReferenceType, ReferenceTypeValue, TypeValue } from '../types';
+import {
+  ReferencePathPiece,
+  ReferenceType,
+  ReferenceTypeValue,
+  TypeValue
+} from '../types';
 import { AjsonErrorCode, AjsonMethod, ValueType } from '../enums';
 import {
   IBigIntTypeValue,
@@ -14,6 +19,8 @@ import {
 } from '../interfaces';
 import { decimalBase } from './date-time';
 import { AjsonError } from '../classes/ajson-error';
+
+const _referencePathPiecesSymbol = Symbol('ajson_reference_path_pieces');
 
 const _tokens = Object.freeze({
   null: `${null}`,
@@ -72,18 +79,180 @@ const _numberTokens = Object.freeze([
 
 const _rootReferencePath = `${_tokens.separators.referencePath}${_tokens.separators.referencePath}`;
 
+const _valueTypePathReferenceWrappers = Object.freeze({
+  [ValueType.array]: Object.freeze([_tokens.array.open, _tokens.array.close]),
+  [ValueType.object]: Object.freeze([_tokens.object.open, _tokens.object.close])
+});
+
 function _isReferenceType(value: unknown) {
   return value && (Array.isArray(value) || typeof value === 'object');
 }
 
-function _extendReferencePath(referencePath: string, value: string) {
-  if (referencePath === _rootReferencePath) {
-    return `${_tokens.separators.referencePath}${JSON.stringify(value)}${
-      _tokens.separators.referencePath
-    }`;
+function _deserializeString(value: string): IStringTypeValue {
+  return {
+    valueType: ValueType.string,
+    value: JSON.parse(value)
+  };
+}
+
+function _getReferencePathPieceType(value: string) {
+  const type =
+    value[0] === _tokens.object.open
+      ? ValueType.object
+      : value[0] === _tokens.array.open
+      ? ValueType.array
+      : undefined;
+
+  const typeConfirmation =
+    value[value.length - 1] === _tokens.object.close
+      ? ValueType.object
+      : value[value.length - 1] === _tokens.array.close
+      ? ValueType.array
+      : undefined;
+
+  return {
+    type,
+    typeConfirmation
+  };
+}
+
+function _deserializeReferencePathPiece(
+  serialized: string,
+  characterLocation?: ICharacterLocation
+) {
+  const { type, typeConfirmation } = _getReferencePathPieceType(serialized);
+
+  if (type === undefined || type !== typeConfirmation) {
+    // TODO: This is impossible, it's malformed json
+    throw new AjsonError(
+      '',
+      AjsonMethod.deserialize,
+      AjsonErrorCode.malformed,
+      characterLocation
+    );
   }
 
-  return `${referencePath}${JSON.stringify(value)}${
+  const deserialized = _deserializeString(
+    serialized.slice(1, serialized.length - 1)
+  );
+
+  let value: number | string;
+
+  if (type === ValueType.array) {
+    value = +deserialized.value;
+
+    if (!Number.isInteger(value) || value < 0) {
+      // TODO: This is impossible, it's malformed json
+      throw new AjsonError(
+        '',
+        AjsonMethod.deserialize,
+        AjsonErrorCode.malformed,
+        characterLocation
+      );
+    }
+  } else {
+    value = deserialized.value;
+  }
+
+  return {
+    value,
+    type
+  } as ReferencePathPiece;
+}
+
+function _lexReferencePathTypeValue(
+  text: string,
+  index: number,
+  characterLocation?: Readonly<ICharacterLocation>
+) {
+  let value = '';
+  const values: string[] = [];
+
+  for (let i = index; i < text.length; ++i) {
+    const character = text[i];
+
+    if (character === _tokens.separators.referencePath) {
+      if (value) {
+        const { type, typeConfirmation } = _getReferencePathPieceType(value);
+
+        if (
+          type === undefined ||
+          type !== typeConfirmation ||
+          value[1] !== _tokens.delimiters.string ||
+          value[value.length - 2] !== _tokens.delimiters.string
+        ) {
+          // TODO invalid referencePath
+          throw new AjsonError(
+            '',
+            AjsonMethod.deserialize,
+            AjsonErrorCode.malformed,
+            characterLocation
+          );
+        }
+
+        values.push(value);
+      }
+
+      value = '';
+      continue;
+    }
+
+    if (
+      value === '' &&
+      character !== _tokens.array.open &&
+      character !== _tokens.object.open
+    ) {
+      break;
+    }
+
+    value += character;
+  }
+
+  const lexedReferencePath = `${_tokens.separators.referencePath}${values.join(
+    _tokens.separators.referencePath
+  )}${_tokens.separators.referencePath}`;
+
+  const lastCharacterIndex = lexedReferencePath.length + index;
+
+  if (value) {
+    // TODO invalid referencePath
+    throw new AjsonError(
+      '',
+      AjsonMethod.deserialize,
+      AjsonErrorCode.malformed,
+      characterLocation
+    );
+  }
+
+  const typeValue: IReferencePathTypeValue = {
+    valueType: ValueType.referencePath,
+    value: {
+      [_referencePathPiecesSymbol]: values
+        .filter((v) => v)
+        .map((v) => _deserializeReferencePathPiece(v, characterLocation))
+    }
+  };
+
+  return {
+    typeValue,
+    lastCharacterIndex
+  };
+}
+
+function _extendReferencePath(
+  referencePath: string,
+  value: string,
+  valueType: ValueType.object | ValueType.array
+) {
+  const wrappers = _valueTypePathReferenceWrappers[valueType];
+
+  if (referencePath === _rootReferencePath) {
+    return `${_tokens.separators.referencePath}${wrappers[0]}${JSON.stringify(
+      value
+    )}${wrappers[1]}${_tokens.separators.referencePath}`;
+  }
+
+  return `${referencePath}${wrappers[0]}${JSON.stringify(value)}${wrappers[1]}${
     _tokens.separators.referencePath
   }`;
 }
@@ -167,7 +336,7 @@ const _serialize = Object.freeze({
         value: _serialize.unknown(
           value[key],
           referencePaths,
-          _extendReferencePath(location, key)
+          _extendReferencePath(location, key, ValueType.object)
         )
       }))
       .filter((p) => p.value !== undefined)
@@ -184,7 +353,7 @@ const _serialize = Object.freeze({
         _serialize.unknown(
           v,
           referencePaths,
-          _extendReferencePath(location, `${i}`)
+          _extendReferencePath(location, `${i}`, ValueType.array)
         )
       )
       .filter((s) => s !== undefined)
@@ -231,7 +400,6 @@ function _buildReferncePaths(value: unknown) {
 
   while (stack.length) {
     const keyValuePair = stack.pop()!;
-
     const referencePath = referencePaths.get(keyValuePair.value);
 
     if (referencePath) {
@@ -247,26 +415,34 @@ function _buildReferncePaths(value: unknown) {
     // this preserves order as they are ordered by first appearance, and traversed by first appearance
     // when deserialized into actual references.
     if (Array.isArray(keyValuePair.value)) {
-      [...keyValuePair.value].reverse().forEach((arrayValue, i) => {
-        if (_isReferenceType(arrayValue)) {
+      [...keyValuePair.value].reverse().forEach((element, i) => {
+        if (_isReferenceType(element)) {
           stack.push({
-            key: _extendReferencePath(keyValuePair.key, `${i}`),
-            value: arrayValue
+            key: _extendReferencePath(
+              keyValuePair.key,
+              `${i}`,
+              ValueType.array
+            ),
+            value: element
           });
         }
       });
     } else {
       Object.keys(keyValuePair.value)
         .reverse()
-        .forEach((objectKey) => {
-          const objectValue = (keyValuePair.value as Record<string, unknown>)[
-            objectKey
+        .forEach((propertyName) => {
+          const property = (keyValuePair.value as Record<string, unknown>)[
+            propertyName
           ];
 
-          if (_isReferenceType(objectValue)) {
+          if (_isReferenceType(property)) {
             stack.push({
-              key: _extendReferencePath(keyValuePair.key, objectKey),
-              value: objectValue as ReferenceType
+              key: _extendReferencePath(
+                keyValuePair.key,
+                propertyName,
+                ValueType.object
+              ),
+              value: property as ReferenceType
             });
           }
         });
@@ -274,6 +450,201 @@ function _buildReferncePaths(value: unknown) {
   }
 
   return referencePaths;
+}
+
+function _isValidReferencePoint(
+  reference: ReferenceType,
+  piece: ReferencePathPiece
+) {
+  return (
+    (Array.isArray(reference) && piece.type === ValueType.array) ||
+    (!Array.isArray(reference) && piece.type === ValueType.object)
+  );
+}
+
+function _resolveReference(
+  reference: ReferenceType,
+  referencePathPieces: ReferencePathPiece[]
+) {
+  const reveresedReferencePathPieces = [...referencePathPieces].reverse();
+  let resolvedReference = reference;
+
+  while (reveresedReferencePathPieces.length) {
+    const referencePathPiece = reveresedReferencePathPieces.pop()!;
+
+    if (_isValidReferencePoint(resolvedReference, referencePathPiece)) {
+      resolvedReference = resolvedReference[
+        referencePathPiece.value as keyof typeof resolvedReference
+      ] as ReferenceType;
+    } else {
+      // TODO invalid referencePath
+      throw new AjsonError(
+        '',
+        AjsonMethod.deserialize,
+        AjsonErrorCode.malformed
+      );
+    }
+
+    if (!resolvedReference || typeof resolvedReference !== 'object') {
+      // TODO invalid referencePath
+      throw new AjsonError(
+        '',
+        AjsonMethod.deserialize,
+        AjsonErrorCode.malformed
+      );
+    }
+  }
+
+  return resolvedReference;
+}
+
+function _replaceSymbolicReferences(
+  value: ReferenceType,
+  referencePathLocations: Record<string, ReferencePathPiece[]>
+) {
+  Object.keys(referencePathLocations).forEach((referencePathLocation) => {
+    const referencePathPieces = referencePathLocations[referencePathLocation];
+
+    const locationPathPieces = _lexReferencePathTypeValue(
+      referencePathLocation,
+      0
+    ).typeValue.value[_referencePathPiecesSymbol].reverse();
+
+    let reference = value;
+
+    while (locationPathPieces.length - 1 > 0) {
+      const locationPathPiece = locationPathPieces.pop()!;
+
+      if (_isValidReferencePoint(reference, locationPathPiece)) {
+        reference = reference[
+          locationPathPiece.value as keyof typeof reference
+        ] as ReferenceType;
+      } else {
+        // TODO invalid referencePath
+        throw new AjsonError(
+          '',
+          AjsonMethod.deserialize,
+          AjsonErrorCode.malformed
+        );
+      }
+
+      if (!reference || typeof reference !== 'object') {
+        // TODO invalid referencePath
+        throw new AjsonError(
+          '',
+          AjsonMethod.deserialize,
+          AjsonErrorCode.malformed
+        );
+      }
+    }
+
+    const lastLocationPathPiece = locationPathPieces.pop()!;
+
+    if (!_isValidReferencePoint) {
+      // TODO invalid referencePath
+      throw new AjsonError(
+        '',
+        AjsonMethod.deserialize,
+        AjsonErrorCode.malformed
+      );
+    }
+
+    const referencedSymbolLocation = reference[
+      lastLocationPathPiece.value as keyof typeof reference
+    ] as Record<symbol, ReferencePathPiece[]>;
+
+    if (
+      typeof referencedSymbolLocation !== 'object' ||
+      referencedSymbolLocation[_referencePathPiecesSymbol] !==
+        referencePathPieces
+    ) {
+      // TODO invalid referencePath
+      throw new AjsonError(
+        '',
+        AjsonMethod.deserialize,
+        AjsonErrorCode.malformed
+      );
+    }
+
+    const resolvedReferense = _resolveReference(value, referencePathPieces);
+
+    (reference[
+      lastLocationPathPiece.value as keyof typeof reference
+    ] as ReferenceType) = resolvedReferense;
+  });
+}
+
+function _resolveRefernecePaths(value: ReferenceType) {
+  const stack: { key: string; value: ReferenceType }[] = [
+    {
+      key: _rootReferencePath,
+      value
+    }
+  ];
+
+  const referencePathLocations: Record<string, ReferencePathPiece[]> = {};
+
+  while (stack.length) {
+    const keyValuePair = stack.pop()!;
+
+    if (Array.isArray(keyValuePair.value)) {
+      keyValuePair.value.forEach((element, i) => {
+        if (_isReferenceType(element)) {
+          const symbols = Object.getOwnPropertySymbols(element);
+
+          if (symbols[0] === _referencePathPiecesSymbol) {
+            referencePathLocations[
+              _extendReferencePath(keyValuePair.key, `${i}`, ValueType.array)
+            ] = element[_referencePathPiecesSymbol];
+          } else {
+            stack.push({
+              key: _extendReferencePath(
+                keyValuePair.key,
+                `${i}`,
+                ValueType.array
+              ),
+              value: element
+            });
+          }
+        }
+      });
+    } else {
+      Object.keys(keyValuePair.value)
+        .reverse()
+        .forEach((propertyName) => {
+          const property = (keyValuePair.value as Record<string, unknown>)[
+            propertyName
+          ];
+
+          if (_isReferenceType(property)) {
+            const symbols = Object.getOwnPropertySymbols(property);
+
+            if (symbols[0] === _referencePathPiecesSymbol) {
+              referencePathLocations[
+                _extendReferencePath(
+                  keyValuePair.key,
+                  `${propertyName}`,
+                  ValueType.object
+                )
+              ] = (property as Record<symbol, ReferencePathPiece[]>)[
+                _referencePathPiecesSymbol
+              ];
+            } else {
+              stack.push({
+                key: _extendReferencePath(
+                  keyValuePair.key,
+                  propertyName,
+                  ValueType.object
+                ),
+                value: property as ReferenceType
+              });
+            }
+          }
+        });
+    }
+  }
+
+  _replaceSymbolicReferences(value, referencePathLocations);
 }
 
 const _deserializers = Object.freeze({
@@ -351,121 +722,8 @@ const _deserializers = Object.freeze({
         value: date
       };
     },
-    [_tokens.delimiters.string](value: string): IStringTypeValue {
-      return {
-        valueType: ValueType.string,
-        value: JSON.parse(value)
-      };
-    }
+    [_tokens.delimiters.string]: _deserializeString
   }),
-  [_tokens.separators.referencePath](
-    values: string[],
-    rootReferenceTypeValue: ReferenceTypeValue | undefined,
-    currentReferenceTypeValue: ReferenceTypeValue | undefined,
-    characterLocation: Readonly<ICharacterLocation>
-  ): IReferencePathTypeValue {
-    if (!rootReferenceTypeValue) {
-      // TODO: This is impossible, it's malformed json
-      throw new AjsonError(
-        '',
-        AjsonMethod.deserialize,
-        AjsonErrorCode.malformed,
-        characterLocation
-      );
-    }
-
-    const referencePath = values
-      .filter((v) => v)
-      .map((v) => _deserializers.delimited[_tokens.delimiters.string](v).value);
-
-    const rootReferencePath = [...referencePath].reverse();
-
-    let referenceTypeValue = rootReferenceTypeValue;
-    let wasSet = true;
-
-    while (rootReferencePath.length) {
-      const key = rootReferencePath.pop()!;
-
-      if (referenceTypeValue.valueType === ValueType.array) {
-        referenceTypeValue = referenceTypeValue.value[
-          +key
-        ] as ReferenceTypeValue;
-      } else {
-        referenceTypeValue = referenceTypeValue.value?.find(
-          (v) => v.name === key
-        )?.value as ReferenceTypeValue;
-      }
-
-      // Might not be in the root chain yet
-      if (referenceTypeValue === undefined) {
-        wasSet = false;
-        break;
-      }
-    }
-
-    if (!wasSet) {
-      if (!currentReferenceTypeValue) {
-        // TODO undefined reference
-        throw new AjsonError(
-          '',
-          AjsonMethod.deserialize,
-          AjsonErrorCode.bug,
-          characterLocation
-        );
-      }
-
-      referenceTypeValue = currentReferenceTypeValue;
-
-      while (referencePath.length) {
-        const key = referencePath.pop()!;
-
-        if (referenceTypeValue.parent?.valueType === ValueType.array) {
-          referenceTypeValue = referenceTypeValue.parent.value[
-            +key
-          ] as ReferenceTypeValue;
-        } else if (referenceTypeValue.parent?.valueType === ValueType.object) {
-          const nextReferenceTypeValue = referenceTypeValue.parent.value.find(
-            (v) => v.name === key
-          );
-
-          if (
-            nextReferenceTypeValue?.value &&
-            (nextReferenceTypeValue.value.valueType === ValueType.array ||
-              nextReferenceTypeValue.value.valueType === ValueType.object)
-          ) {
-            referenceTypeValue =
-              nextReferenceTypeValue.value as ReferenceTypeValue;
-          } else {
-            referenceTypeValue = currentReferenceTypeValue;
-            break;
-          }
-        } else {
-          // TODO undefined reference
-          throw new AjsonError(
-            '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.bug,
-            characterLocation
-          );
-        }
-
-        if (referenceTypeValue === undefined) {
-          // TODO undefined reference
-          throw new AjsonError(
-            '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.bug,
-            characterLocation
-          );
-        }
-      }
-    }
-
-    return {
-      valueType: ValueType.referencePath,
-      value: referenceTypeValue
-    };
-  },
   keyword: Object.freeze({
     [_tokens.null](): INullTypeValue {
       return {
@@ -670,73 +928,6 @@ function _lexKeywordTypeValue(text: string, index: number) {
   }
 }
 
-function _lexReferencePathTypeValue(
-  text: string,
-  index: number,
-  rootReferenceTypeValue: ReferenceTypeValue | undefined,
-  currentReferenceTypeValue: ReferenceTypeValue | undefined,
-  characterLocation: Readonly<ICharacterLocation>
-) {
-  let value = '';
-  const values: string[] = [];
-
-  for (let i = index; i < text.length; ++i) {
-    const character = text[i];
-
-    if (character === _tokens.separators.referencePath) {
-      if (value) {
-        if (value[value.length - 1] !== _tokens.delimiters.string) {
-          // TODO invalid referencePath
-          throw new AjsonError(
-            '',
-            AjsonMethod.deserialize,
-            AjsonErrorCode.malformed,
-            characterLocation
-          );
-        }
-
-        values.push(value);
-      }
-
-      value = '';
-      continue;
-    }
-
-    if (value === '' && character !== _tokens.delimiters.string) {
-      break;
-    }
-
-    value += character;
-  }
-
-  const lastCharacterIndex =
-    `${_tokens.separators.referencePath}${values.join(
-      _tokens.separators.referencePath
-    )}${_tokens.separators.referencePath}`.length + index;
-
-  if (value) {
-    // TODO invalid referencePath
-    throw new AjsonError(
-      '',
-      AjsonMethod.deserialize,
-      AjsonErrorCode.malformed,
-      characterLocation
-    );
-  }
-
-  const typeValue = _deserializers[_tokens.separators.referencePath](
-    values,
-    rootReferenceTypeValue,
-    currentReferenceTypeValue,
-    characterLocation
-  );
-
-  return {
-    typeValue,
-    lastCharacterIndex
-  };
-}
-
 function _lexDelimitedTypeValue(
   text: string,
   index: number,
@@ -782,7 +973,6 @@ function _lexDelimitedTypeValue(
 }
 
 function _lex(text: string): TypeValue {
-  let rootReferenceTypeValue: ReferenceTypeValue | undefined;
   let referenceTypeValue: ReferenceTypeValue | undefined;
   let index = 0;
   let line = 0;
@@ -833,10 +1023,6 @@ function _lex(text: string): TypeValue {
           parent: referenceTypeValue
         };
 
-        if (!rootReferenceTypeValue) {
-          rootReferenceTypeValue = referenceTypeValue;
-        }
-
         ++index;
         continue;
       }
@@ -846,10 +1032,6 @@ function _lex(text: string): TypeValue {
           value: [],
           parent: referenceTypeValue
         };
-
-        if (!rootReferenceTypeValue) {
-          rootReferenceTypeValue = referenceTypeValue;
-        }
 
         const characterLocation = Object.freeze<ICharacterLocation>({
           tab,
@@ -953,8 +1135,6 @@ function _lex(text: string): TypeValue {
         const { typeValue, lastCharacterIndex } = _lexReferencePathTypeValue(
           text,
           index,
-          rootReferenceTypeValue,
-          referenceTypeValue,
           characterLocation
         );
 
@@ -1105,17 +1285,13 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
     case ValueType.bigint:
     case ValueType.number:
     case ValueType.boolean:
-    case ValueType.undefined: {
-      return typeValue.value;
-    }
+    case ValueType.undefined:
     case ValueType.referencePath: {
-      return typeValue.value.resolvedValue;
+      return typeValue.value;
     }
     case ValueType.array: {
       const reference: unknown[] = [];
       const elements = typeValue.value;
-
-      typeValue.resolvedValue = reference;
 
       for (let i = 0; i < elements.length; ++i) {
         reference.push(_parse(elements[i], rootReference ?? reference));
@@ -1126,8 +1302,6 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
     case ValueType.object: {
       const reference: Record<string, unknown> = {};
       const members = typeValue.value;
-
-      typeValue.resolvedValue = reference;
 
       for (let i = 0; i < members.length; ++i) {
         const memberValue = members[i].value;
@@ -1165,6 +1339,12 @@ export const ajson = Object.freeze({
     return _serialize.unknown(value, _buildReferncePaths(value));
   },
   deserialize(text: string): unknown {
-    return _parse(_lex(text));
+    const value = _parse(_lex(text));
+
+    if (value && typeof value === 'object') {
+      _resolveRefernecePaths(value as ReferenceType);
+    }
+
+    return value;
   }
 });
