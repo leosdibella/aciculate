@@ -31,6 +31,7 @@ const _tokens = Object.freeze({
     bigInt: 'n',
     date: '@'
   }),
+  characterEscape: '\\',
   number: Object.freeze({
     decimal: '.',
     exponential: 'e',
@@ -265,6 +266,84 @@ function _extendReferencePath(
   }${_tokens.separators.referencePath}`;
 }
 
+function _serializeReferenceType(partiallySerialized: ReferenceType) {
+  const visitedReferenceMap = new Map<ReferenceType, true>();
+
+  const stack: {
+    key: string[];
+    value: ReferenceType;
+  }[] = [
+    {
+      key: [],
+      value: partiallySerialized as ReferenceType
+    }
+  ];
+
+  let index = 0;
+
+  while (index < stack.length) {
+    const stackItem = stack[index];
+    const stackValue = stackItem.value;
+    const referenceKeys = Object.keys(stackValue);
+
+    referenceKeys.forEach((key) => {
+      const propertyValue = stackValue[key as keyof typeof stackValue];
+
+      if (_isReferenceType(propertyValue)) {
+        const visited = visitedReferenceMap.get(propertyValue as ReferenceType);
+
+        if (!visited) {
+          stack.push({
+            key: [...stackItem.key, key],
+            value: propertyValue as ReferenceType
+          });
+        }
+      }
+    });
+
+    ++index;
+  }
+
+  while (stack.length) {
+    const stackItem = stack.pop()!;
+    let serializedReference: string;
+    let parentReference = partiallySerialized;
+
+    for (let i = 0; i < stackItem.key.length - 1; ++i) {
+      parentReference = parentReference[
+        stackItem.key[i] as keyof typeof parentReference
+      ] as ReferenceType;
+    }
+
+    const reference =
+      parentReference[
+        stackItem.key[stackItem.key.length - 1] as keyof typeof parentReference
+      ] ?? partiallySerialized;
+
+    if (Array.isArray(reference)) {
+      serializedReference = `${_tokens.array.open}${reference.join()}${
+        _tokens.array.close
+      }`;
+    } else {
+      serializedReference = `${_tokens.object.open}${Object.keys(reference).map(
+        (key) =>
+          `${_serializeString(key)}:${reference[key as keyof typeof reference]}`
+      )}${_tokens.object.close}`;
+    }
+
+    if (reference === partiallySerialized) {
+      return serializedReference;
+    }
+  }
+
+  // Unable to serialize reference
+  throw new ObeliskError(
+    '',
+    ObeliskMethod.deserialize,
+    ObeliskErrorCode.malformed
+  );
+}
+
 const _serialize = Object.freeze({
   bigint: (value: bigint) =>
     `${_tokens.delimiters.bigInt}${value}${_tokens.delimiters.bigInt}`,
@@ -293,88 +372,95 @@ const _serialize = Object.freeze({
   },
   object(
     value: ReferenceType,
-    referencePaths: Map<ReferenceType, IReferenceLocation>,
-    location?: string
+    referencePaths: Map<ReferenceType, IReferenceLocation>
   ) {
-    const referencePath = location
-      ? referencePaths.get(value as ReferenceType)
-      : undefined;
+    // Everything in this object is serialized or is a reference type
+    const partiallySerialized: ReferenceType = Array.isArray(value) ? [] : {};
 
-    let referencePathLocation: string | undefined;
-
-    if (referencePath) {
-      if (referencePath.visited) {
-        referencePathLocation = referencePath.location;
-      } else {
-        referencePaths.set(value, {
-          location: referencePath.location,
-          visited: true
-        });
+    const stack: {
+      key: string[];
+      value: ReferenceType;
+    }[] = [
+      {
+        key: [],
+        value: value as ReferenceType
       }
+    ];
+
+    while (stack.length) {
+      const keyValuePair = stack.pop()!;
+
+      Object.keys(keyValuePair.value).forEach((key) => {
+        const referencePath = referencePaths.get(
+          keyValuePair.value as ReferenceType
+        );
+
+        let partiallySerializedReference = partiallySerialized;
+
+        for (let i = 0; i < keyValuePair.key.length - 1; ++i) {
+          (partiallySerializedReference as unknown) =
+            partiallySerializedReference[
+              keyValuePair.key[i] as keyof typeof partiallySerializedReference
+            ];
+        }
+
+        if (referencePath) {
+          if (referencePath.visited) {
+            (partiallySerializedReference[
+              key as keyof typeof partiallySerializedReference
+            ] as string) = referencePath.location;
+          } else {
+            referencePaths.set(keyValuePair.value, {
+              location: referencePath.location,
+              visited: true
+            });
+
+            let reference = value;
+            const extendedKey = [...keyValuePair.key, key];
+
+            for (let i = 0; i < extendedKey.length; ++i) {
+              (reference as unknown) =
+                reference[extendedKey[i] as keyof typeof reference];
+            }
+
+            stack.push({
+              key: extendedKey,
+              value: reference as ReferenceType
+            });
+          }
+        } else {
+          const type = typeof keyValuePair.value;
+          let serializedValue: string | undefined;
+
+          if (keyValuePair.value === null) {
+            serializedValue = _tokens.null;
+          }
+
+          if (keyValuePair.value instanceof Date) {
+            serializedValue = _serialize.date(keyValuePair.value);
+          }
+
+          const serializer = _serialize[type] as (
+            value: unknown,
+            referencePaths: Map<ReferenceType, IReferenceLocation>
+          ) => string | undefined;
+
+          serializedValue = serializer(value, referencePaths);
+
+          if (serializedValue !== undefined) {
+            (partiallySerializedReference[
+              key as keyof typeof partiallySerializedReference
+            ] as string) = serializedValue;
+          }
+        }
+      });
     }
 
-    if (Array.isArray(value)) {
-      return (
-        referencePathLocation ??
-        _serialize.arrayExtension(
-          value,
-          referencePaths,
-          location ?? _rootReferencePath
-        )
-      );
-    } else {
-      return (
-        referencePathLocation ??
-        _serialize.objectExtension(
-          value as Record<string, unknown>,
-          referencePaths,
-          location ?? _rootReferencePath
-        )
-      );
-    }
-  },
-  objectExtension(
-    value: Record<string, unknown>,
-    referencePaths: Map<ReferenceType, IReferenceLocation>,
-    location: string
-  ) {
-    return `{${Object.keys(value)
-      .map((key) => ({
-        key,
-        value: _serialize.unknown(
-          value[key],
-          referencePaths,
-          _extendReferencePath(location, key, ValueType.object)
-        )
-      }))
-      .filter((p) => p.value !== undefined)
-      .map((p) => `${_serialize.string(p.key)}:${p.value}`)
-      .join()}}`;
-  },
-  arrayExtension(
-    value: unknown[],
-    referencePaths: Map<ReferenceType, IReferenceLocation>,
-    location: string
-  ) {
-    console.log(referencePaths);
-    console.log(location);
-    console.log(value);
-
-    return `[${value
-      .map((v, i) =>
-        _serialize.unknown(
-          v,
-          referencePaths,
-          _extendReferencePath(location, `${i}`, ValueType.array)
-        )
-      )
-      .filter((s) => s !== undefined)
-      .join()}]`;
+    return _serializeReferenceType(partiallySerialized);
   },
   unknown(
     value: unknown,
-    referencePaths: Map<ReferenceType, IReferenceLocation>,
-    location?: string
+    referencePaths: Map<ReferenceType, IReferenceLocation>
   ): string | undefined {
     const type = typeof value;
 
@@ -383,16 +469,15 @@ const _serialize = Object.freeze({
     }
 
     if (value instanceof Date) {
-      return _serialize.date(value, location);
+      return _serialize.date(value);
     }
 
     const serializer = _serialize[type] as (
       value: unknown,
-      referencePaths: Map<ReferenceType, IReferenceLocation>,
-      location?: string
+      referencePaths: Map<ReferenceType, IReferenceLocation>
     ) => string | undefined;
 
-    return serializer(value, referencePaths, location);
+    return serializer(value, referencePaths);
   }
 });
 
@@ -426,39 +511,28 @@ function _buildReferncePaths(value: unknown) {
     // Note the keys need to be reveresed so they are plucked from the stack in alpha/numerical order
     // this preserves order as they are ordered by first appearance, and traversed by first appearance
     // when deserialized into actual references.
-    if (Array.isArray(keyValuePair.value)) {
-      [...keyValuePair.value].reverse().forEach((element, i) => {
-        if (_isReferenceType(element)) {
+    const valueType = Array.isArray(keyValuePair.value)
+      ? ValueType.array
+      : ValueType.object;
+
+    Object.keys(keyValuePair.value)
+      .reverse()
+      .forEach((propertyName) => {
+        const propertyValue = (keyValuePair.value as Record<string, unknown>)[
+          propertyName
+        ];
+
+        if (_isReferenceType(propertyValue)) {
           stack.push({
             key: _extendReferencePath(
               keyValuePair.key,
-              `${i}`,
-              ValueType.array
+              propertyName,
+              valueType
             ),
-            value: element
+            value: propertyValue as ReferenceType
           });
         }
       });
-    } else {
-      Object.keys(keyValuePair.value)
-        .reverse()
-        .forEach((propertyName) => {
-          const property = (keyValuePair.value as Record<string, unknown>)[
-            propertyName
-          ];
-
-          if (_isReferenceType(property)) {
-            stack.push({
-              key: _extendReferencePath(
-                keyValuePair.key,
-                propertyName,
-                ValueType.object
-              ),
-              value: property as ReferenceType
-            });
-          }
-        });
-    }
   }
 
   return referencePaths;
@@ -599,67 +673,42 @@ function _resolveRefernecePaths(value: ReferenceType) {
   while (stack.length) {
     const keyValuePair = stack.pop()!;
 
-    if (Array.isArray(keyValuePair.value)) {
-      keyValuePair.value.forEach((element, i) => {
-        if (_isReferenceType(element)) {
-          const symbols = Object.getOwnPropertySymbols(element);
+    const valueType = Array.isArray(keyValuePair.value)
+      ? ValueType.array
+      : ValueType.object;
 
-          if (symbols[0] === _referencePathPiecesSymbol) {
-            referencePathLocations[
-              _extendReferencePath(keyValuePair.key, `${i}`, ValueType.array)
-            ] = element[_referencePathPiecesSymbol];
-          } else {
-            stack.push({
-              key: _extendReferencePath(
-                keyValuePair.key,
-                `${i}`,
-                ValueType.array
-              ),
-              value: element
-            });
-          }
-        }
-      });
-    } else {
-      Object.keys(keyValuePair.value)
-        .reverse()
-        .forEach((propertyName) => {
-          const property = (keyValuePair.value as Record<string, unknown>)[
-            propertyName
+    Object.keys(keyValuePair.value).forEach((propertyName) => {
+      const propertyValue = (keyValuePair.value as Record<string, unknown>)[
+        propertyName
+      ];
+
+      if (_isReferenceType(propertyValue)) {
+        const symbols = Object.getOwnPropertySymbols(propertyValue);
+
+        if (symbols[0] === _referencePathPiecesSymbol) {
+          referencePathLocations[
+            _extendReferencePath(keyValuePair.key, propertyName, valueType)
+          ] = (propertyValue as Record<symbol, ReferencePathPiece[]>)[
+            _referencePathPiecesSymbol
           ];
-
-          if (_isReferenceType(property)) {
-            const symbols = Object.getOwnPropertySymbols(property);
-
-            if (symbols[0] === _referencePathPiecesSymbol) {
-              referencePathLocations[
-                _extendReferencePath(
-                  keyValuePair.key,
-                  propertyName,
-                  ValueType.object
-                )
-              ] = (property as Record<symbol, ReferencePathPiece[]>)[
-                _referencePathPiecesSymbol
-              ];
-            } else {
-              stack.push({
-                key: _extendReferencePath(
-                  keyValuePair.key,
-                  propertyName,
-                  ValueType.object
-                ),
-                value: property as ReferenceType
-              });
-            }
-          }
-        });
-    }
+        } else {
+          stack.push({
+            key: _extendReferencePath(
+              keyValuePair.key,
+              propertyName,
+              valueType
+            ),
+            value: propertyValue as ReferenceType
+          });
+        }
+      }
+    });
   }
 
   _replaceSymbolicReferences(value, referencePathLocations);
 }
 
-const _deserializers = Object.freeze({
+const _deserialize = Object.freeze({
   number(
     value: string,
     characterLocation: Readonly<ICharacterLocation>
@@ -711,7 +760,7 @@ const _deserializers = Object.freeze({
       value: string,
       characterLocation: Readonly<ICharacterLocation>
     ): IDateTypeValue {
-      const dateString = _deserializers.delimited[_tokens.delimiters.string](
+      const dateString = _deserializeString(
         value
           .replace(_tokens.delimiters.date, '')
           .replace(_tokens.delimiters.date, '')
@@ -733,8 +782,7 @@ const _deserializers = Object.freeze({
         valueType: ValueType.date,
         value: date
       };
-    },
-    [_tokens.delimiters.string]: _deserializeString
+    }
   }),
   keyword: Object.freeze({
     [_tokens.null](): INullTypeValue {
@@ -806,7 +854,7 @@ function _lexFiniteNumber(
     };
   }
 
-  const typeValue = _deserializers.number(value, characterLocation);
+  const typeValue = _deserialize.number(value, characterLocation);
   const lastCharacterIndex = value.length + index;
 
   return {
@@ -922,7 +970,7 @@ function _lexKeywordTypeValue(text: string, index: number) {
     }
   }
 
-  const deserializer = _deserializers.keyword[value];
+  const deserializer = _deserialize.keyword[value];
   const lastCharacterIndex = value.length + index;
 
   if (deserializer) {
@@ -940,6 +988,48 @@ function _lexKeywordTypeValue(text: string, index: number) {
   }
 }
 
+function _lexStringTypeValue(
+  text: string,
+  index: number,
+  characterLocation: ICharacterLocation
+) {
+  let value = '';
+
+  for (let i = index; i < text.length; ++i) {
+    const character = text[i];
+
+    value += character;
+
+    if (
+      character === _tokens.delimiters.string &&
+      i > index &&
+      value[i - 1] !== _tokens.characterEscape
+    ) {
+      break;
+    }
+  }
+
+  const lastCharacterIndex = value.length + index;
+  const lastCharacter = text[lastCharacterIndex - 1];
+
+  if (lastCharacter !== _tokens.delimiters.string) {
+    // TODO not a valid delimited value
+    throw new ObeliskError(
+      '',
+      ObeliskMethod.deserialize,
+      ObeliskErrorCode.malformed,
+      characterLocation
+    );
+  }
+
+  const typeValue = _deserializeString(value);
+
+  return {
+    typeValue,
+    lastCharacterIndex
+  };
+}
+
 function _lexDelimitedTypeValue(
   text: string,
   index: number,
@@ -947,9 +1037,7 @@ function _lexDelimitedTypeValue(
   characterLocation: Readonly<ICharacterLocation>
 ) {
   const deserializer =
-    _deserializers.delimited[
-      delimiter as keyof typeof _deserializers.delimited
-    ];
+    _deserialize.delimited[delimiter as keyof typeof _deserialize.delimited];
 
   let value = '';
 
@@ -1128,7 +1216,7 @@ function _lex(text: string): TypeValue {
         }
 
         referenceTypeValue.value.push({
-          name: _deserializers.delimited[_tokens.delimiters.string](name).value
+          name: _deserializeString(name).value
         });
 
         index =
@@ -1212,12 +1300,36 @@ function _lex(text: string): TypeValue {
 
         switch (character) {
           case _tokens.delimiters.date:
-          case _tokens.delimiters.bigInt:
-          case _tokens.delimiters.string: {
+          case _tokens.delimiters.bigInt: {
             const { lastCharacterIndex, typeValue } = _lexDelimitedTypeValue(
               text,
               index,
               character,
+              characterLocation
+            );
+
+            const result = _appendPrimitiveTypeValue(
+              text,
+              referenceTypeValue,
+              typeValue,
+              lastCharacterIndex,
+              characterLocation
+            );
+
+            if (typeof result === 'number') {
+              index = result;
+              continue;
+            } else if (typeof result === 'object') {
+              return result;
+            } else {
+              ++index;
+              continue;
+            }
+          }
+          case _tokens.delimiters.string: {
+            const { typeValue, lastCharacterIndex } = _lexStringTypeValue(
+              text,
+              index,
               characterLocation
             );
 
