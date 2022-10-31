@@ -86,7 +86,11 @@ const _valueTypePathReferenceWrappers = Object.freeze({
 });
 
 function _isReferenceType(value: unknown) {
-  return value && (Array.isArray(value) || typeof value === 'object');
+  return (
+    value &&
+    (Array.isArray(value) || typeof value === 'object') &&
+    !(value instanceof Date)
+  );
 }
 
 function _deserializeString(value: string): IStringTypeValue {
@@ -270,11 +274,11 @@ function _serializeReferenceType(partiallySerialized: ReferenceType) {
   const visitedReferenceMap = new Map<ReferenceType, true>();
 
   const stack: {
-    key: string[];
+    path: string[];
     value: ReferenceType;
   }[] = [
     {
-      key: [],
+      path: [],
       value: partiallySerialized as ReferenceType
     }
   ];
@@ -294,7 +298,7 @@ function _serializeReferenceType(partiallySerialized: ReferenceType) {
 
         if (!visited) {
           stack.push({
-            key: [...stackItem.key, key],
+            path: [...stackItem.path, key],
             value: propertyValue as ReferenceType
           });
         }
@@ -309,15 +313,17 @@ function _serializeReferenceType(partiallySerialized: ReferenceType) {
     let serializedReference: string;
     let parentReference = partiallySerialized;
 
-    for (let i = 0; i < stackItem.key.length - 1; ++i) {
+    for (let i = 0; i < stackItem.path.length - 1; ++i) {
       parentReference = parentReference[
-        stackItem.key[i] as keyof typeof parentReference
+        stackItem.path[i] as keyof typeof parentReference
       ] as ReferenceType;
     }
 
     const reference =
       parentReference[
-        stackItem.key[stackItem.key.length - 1] as keyof typeof parentReference
+        stackItem.path[
+          stackItem.path.length - 1
+        ] as keyof typeof parentReference
       ] ?? partiallySerialized;
 
     if (Array.isArray(reference)) {
@@ -333,6 +339,12 @@ function _serializeReferenceType(partiallySerialized: ReferenceType) {
 
     if (reference === partiallySerialized) {
       return serializedReference;
+    } else {
+      (parentReference[
+        stackItem.path[
+          stackItem.path.length - 1
+        ] as keyof typeof parentReference
+      ] as string) = serializedReference;
     }
   }
 
@@ -378,11 +390,11 @@ const _serialize = Object.freeze({
     const partiallySerialized: ReferenceType = Array.isArray(value) ? [] : {};
 
     const stack: {
-      key: string[];
+      path: string[];
       value: ReferenceType;
     }[] = [
       {
-        key: [],
+        path: [],
         value: value as ReferenceType
       }
     ];
@@ -391,61 +403,51 @@ const _serialize = Object.freeze({
       const keyValuePair = stack.pop()!;
 
       Object.keys(keyValuePair.value).forEach((key) => {
-        const referencePath = referencePaths.get(
-          keyValuePair.value as ReferenceType
-        );
+        const nextValue =
+          keyValuePair.value[key as keyof typeof keyValuePair.value];
 
+        const referencePath = referencePaths.get(nextValue as ReferenceType);
         let partiallySerializedReference = partiallySerialized;
 
-        for (let i = 0; i < keyValuePair.key.length - 1; ++i) {
+        for (let i = 0; i < keyValuePair.path.length; ++i) {
           (partiallySerializedReference as unknown) =
             partiallySerializedReference[
-              keyValuePair.key[i] as keyof typeof partiallySerializedReference
+              keyValuePair.path[i] as keyof typeof partiallySerializedReference
             ];
         }
 
         if (referencePath) {
-          if (referencePath.visited) {
+          const extendedPath = [...keyValuePair.path, key];
+
+          if (referencePath.path.join() === extendedPath.join()) {
+            (partiallySerializedReference[
+              key as keyof typeof partiallySerializedReference
+            ] as ReferenceType) = Array.isArray(nextValue) ? [] : {};
+
+            stack.push({
+              path: extendedPath,
+              value: nextValue as ReferenceType
+            });
+          } else {
             (partiallySerializedReference[
               key as keyof typeof partiallySerializedReference
             ] as string) = referencePath.location;
-          } else {
-            referencePaths.set(keyValuePair.value, {
-              location: referencePath.location,
-              visited: true
-            });
-
-            let reference = value;
-            const extendedKey = [...keyValuePair.key, key];
-
-            for (let i = 0; i < extendedKey.length; ++i) {
-              (reference as unknown) =
-                reference[extendedKey[i] as keyof typeof reference];
-            }
-
-            stack.push({
-              key: extendedKey,
-              value: reference as ReferenceType
-            });
           }
         } else {
-          const type = typeof keyValuePair.value;
+          const type = typeof nextValue;
           let serializedValue: string | undefined;
 
-          if (keyValuePair.value === null) {
+          if (nextValue === null) {
             serializedValue = _tokens.null;
+          } else if (nextValue instanceof Date) {
+            serializedValue = _serialize.date(nextValue);
+          } else {
+            const serializer = _serialize[type] as (
+              value: unknown
+            ) => string | undefined;
+
+            serializedValue = serializer(nextValue);
           }
-
-          if (keyValuePair.value instanceof Date) {
-            serializedValue = _serialize.date(keyValuePair.value);
-          }
-
-          const serializer = _serialize[type] as (
-            value: unknown,
-            referencePaths: Map<ReferenceType, IReferenceLocation>
-          ) => string | undefined;
-
-          serializedValue = serializer(value, referencePaths);
 
           if (serializedValue !== undefined) {
             (partiallySerializedReference[
@@ -488,10 +490,11 @@ function _buildReferncePaths(value: unknown) {
     return referencePaths;
   }
 
-  const stack: { key: string; value: ReferenceType }[] = [
+  const stack: { key: string; value: ReferenceType; path: string[] }[] = [
     {
       key: _rootReferencePath,
-      value: value as ReferenceType
+      value: value as ReferenceType,
+      path: []
     }
   ];
 
@@ -505,7 +508,7 @@ function _buildReferncePaths(value: unknown) {
 
     referencePaths.set(keyValuePair.value, {
       location: keyValuePair.key,
-      visited: false
+      path: keyValuePair.path
     });
 
     // Note the keys need to be reveresed so they are plucked from the stack in alpha/numerical order
@@ -529,7 +532,8 @@ function _buildReferncePaths(value: unknown) {
               propertyName,
               valueType
             ),
-            value: propertyValue as ReferenceType
+            value: propertyValue as ReferenceType,
+            path: [...keyValuePair.path, propertyName]
           });
         }
       });

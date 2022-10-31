@@ -91,14 +91,14 @@ describe('Deserialize primitive values', () => {
 });
 
 describe('Deserialize reference values', () => {
-  it('should handle arrays', () => {
+  it('should handle circular arrays', () => {
     const serialized = '[//]';
     const deserialized = obelisk.deserialize(serialized) as unknown[];
 
     expect(deserialized[0]).to.equal(deserialized);
   });
 
-  it('should handle objects', () => {
+  it('should handle circular objects', () => {
     const serialized = '{"a"://}';
 
     const deserialized = obelisk.deserialize(serialized) as Record<
@@ -107,5 +107,65 @@ describe('Deserialize reference values', () => {
     >;
 
     expect(deserialized.a).to.equal(deserialized);
+  });
+
+  it('should handle any number of levels of circular referencing', () => {
+    const references: Record<string, unknown> = {};
+    const firstLevel: unknown[] = [];
+
+    references.a = firstLevel;
+    firstLevel.push(references);
+
+    const deserialized = obelisk.deserialize(
+      obelisk.serialize(references) ?? ''
+    );
+
+    expect(references).to.deep.equal(deserialized);
+  });
+
+  it('should handle generic objects', () => {
+    const subTest = {
+      a: 1,
+      b: new Date()
+    };
+
+    const anotherTest = [Number('1e-4'), BigInt('75'), undefined];
+    const otherTest: Record<string, unknown> = {};
+    const loopingTestA: unknown[] = [];
+    const loopingTestB: Record<string, unknown> = { u: loopingTestA };
+    const lastTest: unknown[] = [];
+
+    loopingTestA.push(loopingTestB);
+
+    otherTest.r = otherTest;
+    otherTest.s = otherTest;
+
+    lastTest.push(lastTest);
+
+    const test = {
+      c: [subTest],
+      d: subTest,
+      e: {
+        f: undefined,
+        g: null,
+        h: -Infinity,
+        i: Infinity,
+        j: NaN,
+        k: BigInt(1),
+        l: 'string',
+        m: true,
+        n: false,
+        o: [1, 2, subTest, []],
+        p: anotherTest,
+        q: otherTest,
+        t: lastTest,
+        v: loopingTestA
+      }
+    };
+
+    const serialized = obelisk.serialize(test);
+    const deserialized = obelisk.deserialize(serialized ?? '');
+
+    expect(test).to.deep.equal(deserialized);
   });
 });
