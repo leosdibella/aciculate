@@ -6,7 +6,15 @@
   },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": ["./api/tsconfig.json", "./app/tsconfig.json", "./shared/tsconfig.json", "./obelisk/tsconfig.json"],
+    "project": [
+      "./api/tsconfig.json",
+      "./app/tsconfig.json",
+      "./shared/tsconfig.json",
+      "./ouroboros/tsconfig.json",
+      "./obelisk/tsconfig.json",
+      "./obstinate/tsconfig.json",
+      "./ominate/tsconfig.json"
+    ],
     "ecmaVersion": "latest",
     "sourceType": "module"
   },

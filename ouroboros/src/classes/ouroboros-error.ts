@@ -1,22 +1,22 @@
-import { ObeliskErrorCode, ObeliskMethod } from '../enums';
+import { OuroborosErrorCode, OuroborosMethod } from '../enums';
 import { ICharacterLocation } from '../interfaces';
 
-export class ObeliskError extends Error {
+export class OuroborosError extends Error {
   static #formatErrorMessage(
     message: string,
-    method: ObeliskMethod,
-    errorCode: ObeliskErrorCode,
+    method: OuroborosMethod,
+    errorCode: OuroborosErrorCode,
     characterLocation: ICharacterLocation
   ): string {
     const locationInformation =
-      method === ObeliskMethod.deserialize
+      method === OuroborosMethod.deserialize
         ? ` - line number: ${characterLocation.line}, space count ${characterLocation.space}, tab count: ${characterLocation.tab}`
         : '';
 
     return `Obelisk ${method} error - ${message} - code: ${errorCode}${locationInformation}`;
   }
 
-  readonly #errorCode: ObeliskErrorCode;
+  readonly #errorCode: OuroborosErrorCode;
   readonly #characterLocation: ICharacterLocation;
 
   public get errorCode() {
@@ -29,8 +29,8 @@ export class ObeliskError extends Error {
 
   public constructor(
     message: string,
-    method: ObeliskMethod,
-    errorCode: ObeliskErrorCode,
+    method: OuroborosMethod,
+    errorCode: OuroborosErrorCode,
     characterLocation = Object.freeze<ICharacterLocation>({
       tab: 0,
       line: 0,
@@ -38,7 +38,7 @@ export class ObeliskError extends Error {
     })
   ) {
     super(
-      ObeliskError.#formatErrorMessage(
+      OuroborosError.#formatErrorMessage(
         message,
         method,
         errorCode,

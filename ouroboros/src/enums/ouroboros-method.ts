@@ -1,4 +1,4 @@
-export enum ObeliskMethod {
+export enum OuroborosMethod {
   serialize = 'serialize',
   deserialize = 'deserialize'
 }

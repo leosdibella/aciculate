@@ -4,7 +4,7 @@ import {
   ReferenceTypeValue,
   TypeValue
 } from '../types';
-import { ObeliskErrorCode, ObeliskMethod, ValueType } from '../enums';
+import { OuroborosErrorCode, OuroborosMethod, ValueType } from '../enums';
 import {
   IBigIntTypeValue,
   IBooleanTypeValue,
@@ -17,9 +17,9 @@ import {
   IStringTypeValue,
   IUndefinedTypeValue
 } from '../interfaces';
-import { ObeliskError } from '../classes';
+import { OuroborosError } from '../classes';
 
-const _referencePathPiecesSymbol = Symbol('obelisk_reference_path_pieces');
+const _referencePathPiecesSymbol = Symbol('ouroboros_reference_path_pieces');
 const _decimalBase = 10;
 
 const _tokens = Object.freeze({
@@ -137,10 +137,10 @@ function _deserializeReferencePathPiece(
 
   if (type === undefined || type !== typeConfirmation) {
     // TODO: This is impossible, it's malformed json
-    throw new ObeliskError(
+    throw new OuroborosError(
       '',
-      ObeliskMethod.deserialize,
-      ObeliskErrorCode.malformed,
+      OuroborosMethod.deserialize,
+      OuroborosErrorCode.malformed,
       characterLocation
     );
   }
@@ -156,10 +156,10 @@ function _deserializeReferencePathPiece(
 
     if (!Number.isInteger(value) || value < 0) {
       // TODO: This is impossible, it's malformed json
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed,
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed,
         characterLocation
       );
     }
@@ -195,10 +195,10 @@ function _lexReferencePathTypeValue(
           value[value.length - 2] !== _tokens.delimiters.string
         ) {
           // TODO invalid referencePath
-          throw new ObeliskError(
+          throw new OuroborosError(
             '',
-            ObeliskMethod.deserialize,
-            ObeliskErrorCode.malformed,
+            OuroborosMethod.deserialize,
+            OuroborosErrorCode.malformed,
             characterLocation
           );
         }
@@ -229,10 +229,10 @@ function _lexReferencePathTypeValue(
 
   if (value) {
     // TODO invalid referencePath
-    throw new ObeliskError(
+    throw new OuroborosError(
       '',
-      ObeliskMethod.deserialize,
-      ObeliskErrorCode.malformed,
+      OuroborosMethod.deserialize,
+      OuroborosErrorCode.malformed,
       characterLocation
     );
   }
@@ -349,10 +349,10 @@ function _serializeReferenceType(partiallySerialized: ReferenceType) {
   }
 
   // Unable to serialize reference
-  throw new ObeliskError(
+  throw new OuroborosError(
     '',
-    ObeliskMethod.deserialize,
-    ObeliskErrorCode.malformed
+    OuroborosMethod.deserialize,
+    OuroborosErrorCode.malformed
   );
 }
 
@@ -371,10 +371,10 @@ const _serialize = Object.freeze({
     if (isNaN(time)) {
       const errorPath = location ? ` at location: ${location}` : '';
 
-      throw new ObeliskError(
+      throw new OuroborosError(
         `invalid date${errorPath}`,
-        ObeliskMethod.serialize,
-        ObeliskErrorCode.invalidDate
+        OuroborosMethod.serialize,
+        OuroborosErrorCode.invalidDate
       );
     }
 
@@ -459,27 +459,6 @@ const _serialize = Object.freeze({
     }
 
     return _serializeReferenceType(partiallySerialized);
-  },
-  unknown(
-    value: unknown,
-    referencePaths: Map<ReferenceType, IReferenceLocation>
-  ): string | undefined {
-    const type = typeof value;
-
-    if (value === null) {
-      return _tokens.null;
-    }
-
-    if (value instanceof Date) {
-      return _serialize.date(value);
-    }
-
-    const serializer = _serialize[type] as (
-      value: unknown,
-      referencePaths: Map<ReferenceType, IReferenceLocation>
-    ) => string | undefined;
-
-    return serializer(value, referencePaths);
   }
 });
 
@@ -568,19 +547,19 @@ function _resolveReference(
       ] as ReferenceType;
     } else {
       // TODO invalid referencePath
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed
       );
     }
 
     if (!resolvedReference || typeof resolvedReference !== 'object') {
       // TODO invalid referencePath
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed
       );
     }
   }
@@ -611,19 +590,19 @@ function _replaceSymbolicReferences(
         ] as ReferenceType;
       } else {
         // TODO invalid referencePath
-        throw new ObeliskError(
+        throw new OuroborosError(
           '',
-          ObeliskMethod.deserialize,
-          ObeliskErrorCode.malformed
+          OuroborosMethod.deserialize,
+          OuroborosErrorCode.malformed
         );
       }
 
       if (!reference || typeof reference !== 'object') {
         // TODO invalid referencePath
-        throw new ObeliskError(
+        throw new OuroborosError(
           '',
-          ObeliskMethod.deserialize,
-          ObeliskErrorCode.malformed
+          OuroborosMethod.deserialize,
+          OuroborosErrorCode.malformed
         );
       }
     }
@@ -632,10 +611,10 @@ function _replaceSymbolicReferences(
 
     if (!_isValidReferencePoint) {
       // TODO invalid referencePath
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed
       );
     }
 
@@ -649,10 +628,10 @@ function _replaceSymbolicReferences(
         referencePathPieces
     ) {
       // TODO invalid referencePath
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed
       );
     }
 
@@ -721,10 +700,10 @@ const _deserialize = Object.freeze({
 
     if (isNaN(number)) {
       // TODO invalid number
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed,
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed,
         characterLocation
       );
     }
@@ -752,10 +731,10 @@ const _deserialize = Object.freeze({
         };
       } catch {
         // TODO not a big int
-        throw new ObeliskError(
+        throw new OuroborosError(
           '',
-          ObeliskMethod.deserialize,
-          ObeliskErrorCode.malformed,
+          OuroborosMethod.deserialize,
+          OuroborosErrorCode.malformed,
           characterLocation
         );
       }
@@ -774,10 +753,10 @@ const _deserialize = Object.freeze({
 
       if (isNaN(date.getTime())) {
         // TODO invalid date
-        throw new ObeliskError(
+        throw new OuroborosError(
           '',
-          ObeliskMethod.deserialize,
-          ObeliskErrorCode.malformed,
+          OuroborosMethod.deserialize,
+          OuroborosErrorCode.malformed,
           characterLocation
         );
       }
@@ -902,10 +881,10 @@ function _appendPrimitiveTypeValue(
 
     if (remainingText) {
       // TODO malformed json
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed,
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed,
         characterLocation
       );
     }
@@ -925,10 +904,10 @@ function _appendReferenceTypeValue(
 
   if (!referenceTypeValue) {
     // TODO invalid json
-    throw new ObeliskError(
+    throw new OuroborosError(
       '',
-      ObeliskMethod.deserialize,
-      ObeliskErrorCode.malformed,
+      OuroborosMethod.deserialize,
+      OuroborosErrorCode.malformed,
       characterLocation
     );
   }
@@ -936,10 +915,10 @@ function _appendReferenceTypeValue(
   if (remainingText) {
     if (!referenceTypeValue.parent) {
       // TODO invalid json
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed,
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed,
         characterLocation
       );
     }
@@ -1018,10 +997,10 @@ function _lexStringTypeValue(
 
   if (lastCharacter !== _tokens.delimiters.string) {
     // TODO not a valid delimited value
-    throw new ObeliskError(
+    throw new OuroborosError(
       '',
-      ObeliskMethod.deserialize,
-      ObeliskErrorCode.malformed,
+      OuroborosMethod.deserialize,
+      OuroborosErrorCode.malformed,
       characterLocation
     );
   }
@@ -1060,10 +1039,10 @@ function _lexDelimitedTypeValue(
 
   if (lastCharacter !== delimiter) {
     // TODO not a valid delimited value
-    throw new ObeliskError(
+    throw new OuroborosError(
       '',
-      ObeliskMethod.deserialize,
-      ObeliskErrorCode.malformed,
+      OuroborosMethod.deserialize,
+      OuroborosErrorCode.malformed,
       characterLocation
     );
   }
@@ -1186,10 +1165,10 @@ function _lex(text: string): TypeValue {
           lastCharacterIndex === text.length - 1
         ) {
           // TODO not valid JSON
-          throw new ObeliskError(
+          throw new OuroborosError(
             '',
-            ObeliskMethod.deserialize,
-            ObeliskErrorCode.malformed,
+            OuroborosMethod.deserialize,
+            OuroborosErrorCode.malformed,
             characterLocation
           );
         }
@@ -1198,10 +1177,10 @@ function _lex(text: string): TypeValue {
 
         if (name.length < 2 && lastCharacter !== _tokens.object.close) {
           // TODO missing property name
-          throw new ObeliskError(
+          throw new OuroborosError(
             '',
-            ObeliskMethod.deserialize,
-            ObeliskErrorCode.malformed,
+            OuroborosMethod.deserialize,
+            OuroborosErrorCode.malformed,
             characterLocation
           );
         }
@@ -1211,10 +1190,10 @@ function _lex(text: string): TypeValue {
           name[name.length - 1] !== _tokens.delimiters.string
         ) {
           // TODO not valid JSON missing quotes around property name
-          throw new ObeliskError(
+          throw new OuroborosError(
             '',
-            ObeliskMethod.deserialize,
-            ObeliskErrorCode.malformed,
+            OuroborosMethod.deserialize,
+            OuroborosErrorCode.malformed,
             characterLocation
           );
         }
@@ -1436,10 +1415,10 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
 
         if (!memberValue) {
           // TODO never assigned value to property
-          throw new ObeliskError(
+          throw new OuroborosError(
             '',
-            ObeliskMethod.deserialize,
-            ObeliskErrorCode.malformed
+            OuroborosMethod.deserialize,
+            OuroborosErrorCode.malformed
           );
         }
 
@@ -1453,18 +1432,34 @@ function _parse(typeValue: TypeValue, rootReference?: ReferenceType): unknown {
     }
     default: {
       // TODO something went horribly wrong
-      throw new ObeliskError(
+      throw new OuroborosError(
         '',
-        ObeliskMethod.deserialize,
-        ObeliskErrorCode.malformed
+        OuroborosMethod.deserialize,
+        OuroborosErrorCode.malformed
       );
     }
   }
 }
 
-export const obelisk = Object.freeze({
+export const ouroboros = Object.freeze({
   serialize(value: unknown) {
-    return _serialize.unknown(value, _buildReferncePaths(value));
+    const referencePaths = _buildReferncePaths(value);
+    const type = typeof value;
+
+    if (value === null) {
+      return _tokens.null;
+    }
+
+    if (value instanceof Date) {
+      return _serialize.date(value);
+    }
+
+    const serializer = _serialize[type] as (
+      value: unknown,
+      referencePaths: Map<ReferenceType, IReferenceLocation>
+    ) => string | undefined;
+
+    return serializer(value, referencePaths);
   },
   deserialize(text: string): unknown {
     const value = _parse(_lex(text));

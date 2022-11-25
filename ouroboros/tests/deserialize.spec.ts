@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-import { obelisk } from '../src/utilities';
+import { ouroboros } from '../src/utilities';
 import { expect } from 'chai';
 import 'mocha';
 
 describe('Deserialize primitive values', () => {
   it('should handle dates', () => {
     const date = new Date();
-    obelisk.serialize(date);
+    ouroboros.serialize(date);
 
     expect(
-      (obelisk.deserialize(obelisk.serialize(date) ?? '') as Date).getTime()
+      (ouroboros.deserialize(ouroboros.serialize(date) ?? '') as Date).getTime()
     ).to.equal(date.getTime());
   });
 
@@ -17,42 +17,42 @@ describe('Deserialize primitive values', () => {
     const bigInts = [BigInt(12345), BigInt(-987423)];
 
     bigInts.forEach((bi) => {
-      expect(obelisk.deserialize(obelisk.serialize(bi) ?? '')).to.equal(bi);
+      expect(ouroboros.deserialize(ouroboros.serialize(bi) ?? '')).to.equal(bi);
     });
   });
 
   it('should handle null', () => {
-    expect(obelisk.deserialize(obelisk.serialize(null) ?? '')).to.equal(null);
+    expect(ouroboros.deserialize(ouroboros.serialize(null) ?? '')).to.equal(null);
   });
 
   it('should handle undefined', () => {
-    expect(obelisk.deserialize(obelisk.serialize(undefined) ?? '')).to.equal(
+    expect(ouroboros.deserialize(ouroboros.serialize(undefined) ?? '')).to.equal(
       undefined
     );
   });
 
   it('should handle Infinity', () => {
-    expect(obelisk.deserialize(obelisk.serialize(Infinity) ?? '')).to.equal(
+    expect(ouroboros.deserialize(ouroboros.serialize(Infinity) ?? '')).to.equal(
       Infinity
     );
   });
 
   it('should handle -Infinity', () => {
-    expect(obelisk.deserialize(obelisk.serialize(-Infinity) ?? '')).to.equal(
+    expect(ouroboros.deserialize(ouroboros.serialize(-Infinity) ?? '')).to.equal(
       -Infinity
     );
   });
 
   it('should handle NaN', () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    expect(obelisk.deserialize(obelisk.serialize(NaN) ?? '')).to.be.NaN;
+    expect(ouroboros.deserialize(ouroboros.serialize(NaN) ?? '')).to.be.NaN;
   });
 
   it('should handle booleans', () => {
     const booleans = [true, false];
 
     booleans.forEach((b) => {
-      expect(obelisk.deserialize(obelisk.serialize(b) ?? '')).to.equal(b);
+      expect(ouroboros.deserialize(ouroboros.serialize(b) ?? '')).to.equal(b);
     });
   });
 
@@ -60,7 +60,7 @@ describe('Deserialize primitive values', () => {
     const integers = [124, -123124, 13, 11100099123];
 
     integers.forEach((int) => {
-      expect(obelisk.deserialize(obelisk.serialize(int) ?? '')).to.equal(int);
+      expect(ouroboros.deserialize(ouroboros.serialize(int) ?? '')).to.equal(int);
     });
   });
 
@@ -68,9 +68,9 @@ describe('Deserialize primitive values', () => {
     const float = 1123.123124;
     const float2 = 93e-42;
 
-    expect(obelisk.deserialize(obelisk.serialize(float) ?? '')).to.equal(float);
+    expect(ouroboros.deserialize(ouroboros.serialize(float) ?? '')).to.equal(float);
 
-    expect(obelisk.deserialize(obelisk.serialize(float2) ?? '')).to.equal(
+    expect(ouroboros.deserialize(ouroboros.serialize(float2) ?? '')).to.equal(
       float2
     );
   });
@@ -83,7 +83,7 @@ describe('Deserialize primitive values', () => {
     ];
 
     strings.forEach((string) => {
-      expect(obelisk.deserialize(obelisk.serialize(string) ?? '')).to.equal(
+      expect(ouroboros.deserialize(ouroboros.serialize(string) ?? '')).to.equal(
         string
       );
     });
@@ -93,7 +93,7 @@ describe('Deserialize primitive values', () => {
 describe('Deserialize reference values', () => {
   it('should handle circular arrays', () => {
     const serialized = '[//]';
-    const deserialized = obelisk.deserialize(serialized) as unknown[];
+    const deserialized = ouroboros.deserialize(serialized) as unknown[];
 
     expect(deserialized[0]).to.equal(deserialized);
   });
@@ -101,7 +101,7 @@ describe('Deserialize reference values', () => {
   it('should handle circular objects', () => {
     const serialized = '{"a"://}';
 
-    const deserialized = obelisk.deserialize(serialized) as Record<
+    const deserialized = ouroboros.deserialize(serialized) as Record<
       string,
       unknown
     >;
@@ -116,8 +116,8 @@ describe('Deserialize reference values', () => {
     references.a = firstLevel;
     firstLevel.push(references);
 
-    const deserialized = obelisk.deserialize(
-      obelisk.serialize(references) ?? ''
+    const deserialized = ouroboros.deserialize(
+      ouroboros.serialize(references) ?? ''
     );
 
     expect(references).to.deep.equal(deserialized);
@@ -163,8 +163,8 @@ describe('Deserialize reference values', () => {
       }
     };
 
-    const serialized = obelisk.serialize(test);
-    const deserialized = obelisk.deserialize(serialized ?? '');
+    const serialized = ouroboros.serialize(test);
+    const deserialized = ouroboros.deserialize(serialized ?? '');
 
     expect(test).to.deep.equal(deserialized);
   });

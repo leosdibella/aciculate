@@ -1,1 +1,1 @@
-export * from './obelisk';
+export * from './registry';

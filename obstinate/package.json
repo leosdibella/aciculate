@@ -1,7 +1,7 @@
 {
-  "name": "@aciculate/obelisk",
+  "name": "@aciculate/obstinate",
   "version": "1.0.0",
-  "description": "A dependency injection framework",
+  "description": "A directed acyclic graph implementation",
   "main": "index.js",
   "scripts": {
     "type-check": "tsc --noEmit --skipLibCheck",

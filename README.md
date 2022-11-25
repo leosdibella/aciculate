@@ -17,7 +17,7 @@ So what all's in here then?
 A lot. Most things are built from scratch, just for fun / challenge.
 
 1. General Purpose + AOP
-    1. Dependency Injection Framework
+    1. Obelisk - A Dependency Injection Framework
         - Using decorators + reflect-metadata to mark dependencies with Symbol tokens
         - Build a Directed Acyclic Graph based on the dependency chain and topologically sort it
         - Construct the depdency chain from the bottom up
@@ -34,7 +34,7 @@ A lot. Most things are built from scratch, just for fun / challenge.
         - Built on top of Native Web Components
     8. UI Component Library
         - Themeable using CSS variables + public API
-    9. Obelisk - A custom JSON Serializer / Deserialize
+    9. Ouroboros - A custom JSON Serializer / Deserialize
         - Supports Native Date Objects
         - Supports shallow references (including circular references)
         - Supports BigInt

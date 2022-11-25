@@ -1,6 +1,6 @@
-import { IVertex } from '../interfaces';
-import { ApiError } from './api-error';
-import { ApiErrorCode } from '../enums';
+import { IStackItem, IVertex } from '../interfaces';
+import { ObstinateError } from './obstinate-error';
+import { ObstinateErrorCode } from '../enums';
 
 export class DirectedAcyclicGraph<T = unknown> {
   readonly #allowDuplicateVertexValues: boolean = false;
@@ -13,8 +13,8 @@ export class DirectedAcyclicGraph<T = unknown> {
 
   #topologicalSort() {
     let next: number | undefined;
-    let last: { vertexIndex: number; edgeIndex: number };
-    let stack: { vertexIndex: number; edgeIndex: number }[];
+    let last: IStackItem;
+    let stack: IStackItem[];
     const visitedVertices = [...Array(this.#vertices.length)].map(() => false);
     const topologicallySorted: T[] = [];
 
@@ -77,12 +77,10 @@ export class DirectedAcyclicGraph<T = unknown> {
           .map((vi) => this.#vertexToString(this.#vertices[vi].value))
           .join(' -> ');
 
-        throw new ApiError([
-          {
-            errorCode: ApiErrorCode.circularDependency,
-            message: `Circular dependency detected: ${circularDependency}`
-          }
-        ]);
+        throw new ObstinateError(
+          ObstinateErrorCode.circularDependency,
+          `Circular dependency detected: ${circularDependency}`
+        );
       } else {
         visitedVertexIndices[vertexIndex] = ++currentVisitingIndex;
 

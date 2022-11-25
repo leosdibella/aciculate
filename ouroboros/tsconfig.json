@@ -13,9 +13,7 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "importHelpers": true,
-    "paths": {
-      "@obstinate/*": ["../obstinate/src/*"],
-    },
+    "paths": {},
     "target": "ES2019",
     "typeRoots": ["node_modules/@types"],
     "lib": ["ES2020"],

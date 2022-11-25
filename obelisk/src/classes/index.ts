@@ -1,1 +1,1 @@
-export * from './obelisk-error';
+export * from './obelisk-error-code';

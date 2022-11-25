@@ -1,5 +1,5 @@
 export enum ObeliskErrorCode {
-  bug = 'bug',
-  malformed = 'malformed',
-  invalidDate = 'invalidDate'
+  nonOptionalDependency = 'nonOptionalDependency',
+  nonFunction = 'nonFunction',
+  nonConstructor = 'nonConstructor'
 }
