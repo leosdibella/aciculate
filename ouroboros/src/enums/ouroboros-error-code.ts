@@ -1,5 +1,6 @@
 export enum OuroborosErrorCode {
   bug = 'bug',
   malformed = 'malformed',
-  invalidDate = 'invalidDate'
+  invalidDate = 'invalidDate',
+  invalidReference = 'invalidReference'
 }
