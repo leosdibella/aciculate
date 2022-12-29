@@ -8,7 +8,7 @@
     "type-check-diagnostics": "tsc --noEmit --skipLibCheck --extendedDiagnostics",
     "type-check-all": "tsc --noEmit",
     "type-check-all-diagnostics": "tsc --noEmit --extendedDiagnostics",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'"
+    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register -r tsconfig-paths/register 'tests/**/*.ts'"
   },
   "keywords": [
     "dependency",

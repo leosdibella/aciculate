@@ -18,7 +18,8 @@ import {
   HttpVerb,
   Role
 } from '@shared/enums';
-import { registry, toCamelCase } from '@shared/utilities';
+import { toCamelCase } from '@shared/utilities';
+import { registry } from '@obelisk/utilities';
 import { Request, Response } from 'express';
 import { Constructor } from '@shared/types';
 import { ControllerName, EntityName } from '@enums';

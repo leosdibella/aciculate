@@ -1,7 +1,8 @@
 import { dependencyInjectionTokens } from '@data';
 import { ComponentTag } from '@enums';
 import { IAuthenticationService } from '@interfaces/services';
-import { customElement, deferInject } from '@shared/decorators';
+import { customElement } from '@ornament/decorators';
+import { deferInject } from '@obelisk/decorators';
 
 enum LoginSelector {
   username = 'login-username',

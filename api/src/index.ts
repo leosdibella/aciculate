@@ -20,8 +20,8 @@ import {
   UserController,
   AuthenticationController
 } from '@classes';
-import { registry } from '@shared/utilities';
-import { IRegistryValue } from '@shared/interfaces';
+import { registry } from '@obelisk/utilities';
+import { IRegistryValue } from '@obelisk/interfaces';
 import {
   AuthenticationService,
   CalendarEventService,

@@ -3,7 +3,7 @@ import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
 import { LocalStorageKey } from '@enums/local-storage-key';
 import { IAuthenticationService, IHttpService } from '@interfaces';
 import { ApiError } from '@shared/classes';
-import { inject } from '@shared/decorators';
+import { inject } from '@obelisk/decorators';
 import { Entity } from '@shared/enums';
 import { IAuthenticationResponse } from '@shared/interfaces';
 

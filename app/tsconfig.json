@@ -27,7 +27,10 @@
       "@types/*": ["src/types/index/*"],
       "@types": ["src/types/index"],
       "@utilities/*": ["src/utilities/index/*"],
-      "@utilities": ["src/utilities/index"]
+      "@utilities": ["src/utilities/index"],
+      "@ornament/*": ["../ornament/src/*"],
+      "@obelisk/*": ["../obelisk/src/*"],
+      "@obstinate/*": ["../obstinate/src/*"],
     },
     "target": "ES2019",
     "typeRoots": ["node_modules/@types"],

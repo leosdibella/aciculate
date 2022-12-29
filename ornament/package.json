@@ -1,0 +1,31 @@
+{
+  "name": "@aciculate/ornament",
+  "version": "1.0.0",
+  "description": "A slim front end framework for quickly wiring up native web components",
+  "main": "index.js",
+  "scripts": {
+    "type-check": "tsc --noEmit --skipLibCheck",
+    "type-check-diagnostics": "tsc --noEmit --skipLibCheck --extendedDiagnostics",
+    "type-check-all": "tsc --noEmit",
+    "type-check-all-diagnostics": "tsc --noEmit --extendedDiagnostics",
+    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register -r tsconfig-paths/register 'tests/**/*.ts'"
+  },
+  "keywords": [
+    "JSON",
+    "circular",
+    "references"
+  ],
+  "author": "Leonardo S DiBella",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chai": "^4.3.3",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^18.7.14",
+    "chai": "^4.3.6",
+    "mocha": "^10.1.0",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^3.12.0",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4"
+  }
+}

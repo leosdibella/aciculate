@@ -1,5 +1,5 @@
 import { ComponentTag } from '@enums';
-import { customElement } from '@shared/decorators';
+import { customElement } from '@ornament/decorators';
 
 const html = `
   <div id="test">

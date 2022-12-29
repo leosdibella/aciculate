@@ -1,5 +1,5 @@
-import { IRegistryValue } from '@shared/interfaces';
-import { registry } from '@shared/utilities';
+import { IRegistryValue } from '@obelisk/interfaces';
+import { registry } from '@obelisk/utilities';
 import * as components from './classes/components';
 import { dependencyInjectionTokens } from '@data';
 import {

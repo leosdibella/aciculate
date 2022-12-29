@@ -7,13 +7,17 @@
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "project": [
+      "./all/tsconfig.json",
       "./api/tsconfig.json",
       "./app/tsconfig.json",
       "./shared/tsconfig.json",
       "./ouroboros/tsconfig.json",
       "./obelisk/tsconfig.json",
       "./obstinate/tsconfig.json",
-      "./ominate/tsconfig.json"
+      "./ominate/tsconfig.json",
+      "./ornament/tsconfig.json",
+      "./orator/tsconfig.json",
+      "./orphic/tsconfig.json"
     ],
     "ecmaVersion": "latest",
     "sourceType": "module"

@@ -2,7 +2,7 @@ import { HttpError } from '@classes/http-error';
 import { dependencyInjectionTokens } from '@data/dependency-injection-tokens';
 import { IHttpRequest, IHttpService, IHttpSimpleRequest } from '@interfaces';
 import { ApiError } from '@shared/classes';
-import { inject } from '@shared/decorators';
+import { inject } from '@obelisk/decorators';
 import { ApiErrorCode, HttpStatusCode, HttpVerb } from '@shared/enums';
 import { HttpInterceptor } from '@types';
 
