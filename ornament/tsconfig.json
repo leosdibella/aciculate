@@ -13,7 +13,9 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "importHelpers": true,
-    "paths": {},
+    "paths": {
+      "@all/*": ["../all/src/*"]
+    },
     "target": "ES2019",
     "typeRoots": ["node_modules/@types"],
     "strictNullChecks": true,

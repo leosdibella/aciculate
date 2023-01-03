@@ -1,6 +1,5 @@
-export interface ICustomElementArguments<T> {
+export interface ICustomElementArguments {
   tag: string;
   html: string;
-  observedAttributes?: T[];
   styles?: string;
 }
